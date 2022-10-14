@@ -9,7 +9,6 @@
 
 namespace utils::graphics::opengl
 {
-
 	struct Vertex
 	{
 		glm::vec3 position;
@@ -67,6 +66,13 @@ namespace utils::graphics::opengl
 		{
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+
+		void draw_instanced(int amount)
+		{
+			glBindVertexArray(VAO);
+			glDrawElementsInstanced(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0, amount);
 			glBindVertexArray(0);
 		}
 

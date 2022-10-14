@@ -36,6 +36,9 @@
     <ClInclude Include="utils\shader.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
+    <ClInclude Include="utils\camera.h">
+      <Filter>Headers\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Main.cpp">
@@ -52,6 +55,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\basic.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\mvp.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\mvp_instanced.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

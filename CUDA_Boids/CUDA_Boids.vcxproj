@@ -98,6 +98,7 @@
     <CudaCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="utils\camera.h" />
     <ClInclude Include="utils\cuda_utils.cuh" />
     <ClInclude Include="utils\entity.h" />
     <ClInclude Include="utils\mesh.h" />
@@ -110,6 +111,8 @@
   <ItemGroup>
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.vert" />
+    <None Include="shaders\mvp.vert" />
+    <None Include="shaders\mvp_instanced.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
