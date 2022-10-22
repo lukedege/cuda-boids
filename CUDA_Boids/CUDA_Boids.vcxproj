@@ -50,6 +50,7 @@
     <IncludePath>..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -92,6 +93,7 @@
       <CodeGeneration>compute_37,sm_37</CodeGeneration>
       <CudaRuntime>Shared</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <AdditionalOptions>-std=c++17 %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

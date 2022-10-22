@@ -11,7 +11,6 @@
 #include <iostream>
 #include <random>
 #include <cstdlib>
-#include <concepts>
 
 namespace utils
 {
@@ -24,7 +23,7 @@ namespace utils
 
 		inline __host__ __device__ int ceil(int x, int y) 
 		{
-			return ::ceil(static_cast<double>(x) / y);
+			return static_cast<int>(::ceil(static_cast<double>(x) / y));
 		}
 	}
 

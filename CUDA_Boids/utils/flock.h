@@ -26,7 +26,7 @@ namespace utils::graphics::opengl
 		}
 		
 		Flock(Mesh& other, size_t amount = 1, const glm::mat4& transform = glm::mat4{ 1 }) :
-			Entity{ std::move(other), transform }, positions{}
+			Entity{ other, transform }, positions{}
 		{
 			positions.resize(amount);
 		}
