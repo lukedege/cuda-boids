@@ -25,18 +25,107 @@
 #include "utils/shader.h"
 #include "utils/mesh.h"
 #include "utils/entity.h"
+#include "utils/flock.h"
 #include "utils/camera.h"
 
 namespace ugo = utils::graphics::opengl;
 
-void calculate_positions(ugo::Shader shader_to_setup, std::vector<glm::vec2>& positions, float delta_time)
+/*
+* TODO FOR FLOCKING
+* The entire area is divided into a dense enough, fixed(?) grid of neighbourhoods, 
+*    each of which represents an area in which boids will influence each other
+* We'll have 2 operations to perform the flocking operation 
+* - Firstly, we will calculate for each boid which neighbourhood he belongs to
+*	- To do so, each boid can just evaluate its own position in regards of the grid granularity and identify in which of the neighbourhoods he belongs to
+*	- He will add himself to the list of the boids in that neighbourhood (list in SMEM preferably)
+* - Secondly, we will calculate the new velocity/position for each boid of a neighbourhood, for all neighbourhoods
+*	- It would be comfy to have the list of the boids in each neighbourhood in SMEM since it's a common information for each thread in a block
+*/
+
+__global__ void calculate_positions_gpu_kernel(utils::containers::vec2<float>* positions, float* angles, size_t size, float delta_time)
 {
-	for (size_t i = 0; i < positions.size(); i++)
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	//int offset = (i % 2) * 2 - 1;
+	int pos_offset = 1;
+	int angle_multiplier = (i % 2) * 2 - 1;
+	float angle_offset = 0.2f;
+
+	float cos_angle, sin_angle;
+	utils::containers::vec2<float> new_pos;
+	//printf("%f, %f, %f\n", delta_time, positions[i].x, positions[i].y);
+	if (i < size)
 	{
-		positions[i][0] += ( i % 2? -1 : 1 ) * delta_time;
-		shader_to_setup.setVec2("positions["+ std::to_string(i) + "]", positions[i]);
+		angles[i] = 3.14f/2;
+		cos_angle = cos(angles[i]);
+		sin_angle = sin(angles[i]);
+		new_pos.x = positions[i].x + pos_offset * delta_time;
+		new_pos.y = positions[i].y;
+		positions[i].x = new_pos.x * cos_angle - new_pos.y * sin_angle;
+		positions[i].y = new_pos.x * sin_angle + new_pos.y * cos_angle;
+		//positions[i].x += (cos_angle * pos_offset * delta_time - sin_angle * pos_offset * delta_time);
+		//positions[i].y += (sin_angle * pos_offset * delta_time + cos_angle * pos_offset * delta_time);
+		//positions[i].x += cos_angle * pos_offset * delta_time;
+		//positions[i].y += sin_angle * pos_offset * delta_time;
+		//if (angles[i] >= 360.f)
+		//	angles[i] -= 360.f;
+	}
+	
+}
+
+__host__ void calculate_positions_gpu_zero_pinned(size_t grid_size, size_t block_size, utils::containers::vec2<float>* positions, float* angles, size_t size, float delta_time)
+{
+	calculate_positions_gpu_kernel CUDA_KERNEL(grid_size, block_size)(positions, angles, size, delta_time); // gpu
+	cudaDeviceSynchronize(); // NEVER REMOVE THIS WHEN USING PINNED MEMORY IF YOU CARE ABOUT YOUR PC :)
+}
+
+__host__ void calculate_positions_gpu_unified(size_t grid_size, size_t block_size, utils::containers::vec2<float>* positions, float* angles, size_t size, float delta_time)
+{
+	calculate_positions_gpu_kernel CUDA_KERNEL(grid_size, block_size)(positions, angles, size, delta_time); // gpu
+	cudaDeviceSynchronize(); // same reason above :)
+}
+
+__host__ void calculate_positions_gpu_transfer(size_t grid_size, size_t block_size, utils::containers::vec2<float>* positions_gpu, utils::containers::vec2<float>* positions_cpu, float* angles, size_t size, float delta_time)
+{
+	calculate_positions_gpu_kernel CUDA_KERNEL(grid_size, block_size)(positions_gpu, angles, size, delta_time); // gpu
+	cudaMemcpy(positions_cpu, positions_gpu, size * sizeof(utils::containers::vec2<float>), cudaMemcpyDeviceToHost);
+}
+
+__host__ void calculate_positions_cpu(utils::containers::vec2<float>* positions, float* angles, size_t size, float delta_time)
+{
+	int pos_offset = 1;
+	float angle_offset = 0.2f;
+
+	float cos_angle, sin_angle;
+	utils::containers::vec2<float> new_pos;
+
+	for (size_t i = 0; i < size; i++)
+	{
+		angles[i] = glm::radians(90.f);
+		cos_angle = cos(angles[i]);
+		sin_angle = sin(angles[i]);
+		
+		//new_pos.x = positions[i].x + pos_offset * delta_time;
+		//new_pos.y = positions[i].y + pos_offset * delta_time;
+		//positions[i].x = new_pos.x * cos_angle - new_pos.y * sin_angle;
+		//positions[i].y = new_pos.x * sin_angle + new_pos.y * cos_angle;
+		positions[i].x += (cos_angle * pos_offset * delta_time - sin_angle * pos_offset * delta_time);
+		positions[i].y += (sin_angle * pos_offset * delta_time + cos_angle * pos_offset * delta_time);
+		//positions[i].x += cos_angle * pos_offset * delta_time;
+		//positions[i].y += sin_angle * pos_offset * delta_time;
+		//if (angles[i] >= 360.f)
+		//	angles[i] -= 360.f;
 	}
 }
+
+__host__ void setup_shader_pos_angle(ugo::Shader shader, utils::containers::vec2<float>* positions, float* angles, size_t size)
+{
+	for (size_t i = 0; i < size; i++)
+	{
+		shader.setVec2 ("positions[" + std::to_string(i) + "]", { positions[i].x, positions[i].y });
+		shader.setFloat("angles["    + std::to_string(i) + "]", angles[i]);
+	}
+}
+
 
 int main()
 {
@@ -52,15 +141,12 @@ int main()
 			{ 1200    }, //.viewport_width
 			{ 900     }, //.viewport_height
 			{ false   }, //.resizable
+			{ false   }, //.debug_gl
 		}
 	};
 
 	GLFWwindow* glfw_window = wdw.get();
 	auto window_size = wdw.get_size();
-
-	// we put in relation the window and the callbacks
-	//glfwSetKeyCallback(glfw_window, key_callback);
-	//glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 
 	ugo::Shader basic_shader{ "shaders/mvp_instanced.vert", "shaders/basic.frag", {}, 4, 3 };
 
@@ -75,15 +161,42 @@ int main()
 		0, 1, 2,   // first triangle
 	};
 
-	std::vector<glm::vec2> positions
-	{
-		{{0,0}, {2, 2}, {-2, -2}}
-	};
-
 	ugo::Mesh   triangle_mesh{ vertices, indices };
-	// TODO split concept of entity and fleet of entities; entity = base object, fleet = vec of positions + represented entity
-	ugo::Entity triangle     { triangle_mesh, positions.size() };
 
+	size_t pos_size = 1024;
+	ugo::Flock triangles{ triangle_mesh, pos_size };
+
+	utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
+
+	// CUDA setup
+	size_t alloc_size = pos_size * sizeof(utils::containers::vec2<float>);
+	size_t block_size = 32;
+	size_t grid_size = utils::math::ceil(pos_size, block_size);
+
+	// Pinned (calc time ~40k - 1024000)
+	utils::containers::vec2<float>* positions_pinned;
+	cudaHostAlloc(&positions_pinned, alloc_size, cudaHostAllocMapped); ///pinned, with implicit zerocopy unified addressing, usable by both gpu and cpu
+	cudaMemcpy(positions_pinned, triangles.positions.data(), alloc_size, cudaMemcpyHostToHost);
+
+	// Unified 
+	utils::containers::vec2<float>* positions_unified;
+	cudaMallocManaged(&positions_unified, alloc_size, cudaMemAttachGlobal);
+	cudaMemcpy(positions_unified, triangles.positions.data(), alloc_size, cudaMemcpyHostToHost);
+
+	// Normal
+	utils::containers::vec2<float>* positions_cpu;
+	//positions_cpu = (utils::containers::vec2<float>*) malloc(alloc_size);
+	//memcpy(positions_cpu, triangles.positions.data(), alloc_size);
+	cudaMallocHost(&positions_cpu, alloc_size);
+	cudaMemcpy(positions_cpu, triangles.positions.data(), alloc_size, cudaMemcpyHostToHost);
+
+	utils::containers::vec2<float>* positions_gpu;
+	cudaMalloc(&positions_gpu, alloc_size);
+	cudaMemcpy(positions_gpu, triangles.positions.data(), alloc_size, cudaMemcpyHostToDevice);
+
+	// Angles (Unified only for now)
+	float* angles_unified;
+	cudaMallocManaged(&angles_unified, alloc_size, cudaMemAttachGlobal);
 
 	// Camera setup
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
@@ -92,7 +205,11 @@ int main()
 
 	GLfloat delta_time = 0.0f;
 	GLfloat last_frame = 0.0f;
-	//triangle.rotate_deg(90.f, { 0,0,1 });
+
+	int option = 2;
+	utils::containers::vec2<float>* positions_final = nullptr;
+	float* angles_final = nullptr;
+
 	while (wdw.is_open())
 	{
 		// we determine the time passed from the beginning
@@ -110,17 +227,48 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		
-		/*
-		TODO: cuda kernel calculates position for boids and returns them to opengl for drawing
-		*/
-		calculate_positions(basic_shader, positions, delta_time);
+		GLfloat before_calculations = glfwGetTime();
 
-		//triangle.translate({ 0.f, deltaTime * 3.f, 0.f });
-		//triangle.rotate_deg(deltaTime * 30.f, { 1,0,0 });
-		triangle.draw(basic_shader, view_matrix);
+		switch (option)
+		{
+		case 0:
+			// Pinned gpu (calc time ~40k - 1024000)
+			calculate_positions_gpu_zero_pinned(grid_size, block_size, positions_pinned, angles_unified, pos_size, delta_time);
+			positions_final = positions_pinned;
+			break;
+		case 1:
+			// Transfer gpu (calc time ~3.7k - 1024000)
+			calculate_positions_gpu_transfer   (grid_size, block_size, positions_gpu, positions_cpu, angles_unified, pos_size, delta_time);
+			positions_final = positions_cpu;
+			break;// gpu
+		case 2:
+			// Cpu (calc time ~5.5k - 1024000)
+			calculate_positions_cpu(positions_cpu, angles_unified, pos_size, delta_time);
+			positions_final = positions_cpu;
+			break;// cpu
+		case 3:
+			// Unified gpu (calc time ~1.1k - 1024000)
+			calculate_positions_gpu_unified(grid_size, block_size, positions_unified, angles_unified, pos_size, delta_time);
+			positions_final = positions_unified;
+			break;// gpu
+		}
+		angles_final = angles_unified;
+
+		GLfloat after_calculations = glfwGetTime();
+		GLfloat delta_calculations = after_calculations - before_calculations;
+		std::cout << "Calcs: " << delta_calculations * 1000000 << std::endl;
+
+		setup_shader_pos_angle(basic_shader, positions_final, angles_final, pos_size);
+		triangles.draw(basic_shader, view_matrix);
 
 		glfwSwapBuffers(glfw_window);
 		glfwPollEvents();
+		
 	}
+	
+	cudaFreeHost(positions_pinned);
+	cudaFree(positions_gpu);
+	//free(positions_cpu);
+	cudaFreeHost(positions_cpu);
 	return 0;
 }

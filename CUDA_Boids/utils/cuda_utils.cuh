@@ -11,6 +11,7 @@
 #include <iostream>
 #include <random>
 #include <cstdlib>
+#include <concepts>
 
 namespace utils
 {
@@ -30,6 +31,15 @@ namespace utils
 	namespace containers
 	{
 		template<typename T>
+		struct vec2
+		{
+			T x, y;
+
+			T& operator[](const size_t index) { if (index) return y; else return x; }
+		};
+
+
+		template<typename T>
 		struct sized_array
 		{
 			T* data;
@@ -45,6 +55,20 @@ namespace utils
 			for (size_t i = 0; i < arr.size(); i++)
 			{
 				arr[i] = distr(generator);
+			}
+		}
+
+		template<typename T>
+		inline void random_vec2_fill_cpu(std::vector<vec2<T>>& arr, const int range_from, const int range_to)
+		{
+			std::random_device                  rand_dev;
+			std::mt19937                        generator(rand_dev());
+			std::uniform_int_distribution<int>  distr(range_from, range_to);
+
+			for (size_t i = 0; i < arr.size(); i++)
+			{
+				arr[i][0] = distr(generator);
+				arr[i][1] = distr(generator);
 			}
 		}
 

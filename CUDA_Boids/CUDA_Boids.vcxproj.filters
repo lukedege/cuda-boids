@@ -27,7 +27,7 @@
     <ClInclude Include="utils\cuda_utils.cuh">
       <Filter>Headers\utils\CUDA</Filter>
     </ClInclude>
-    <ClInclude Include="utils\entity.h">
+    <ClInclude Include="utils\flock.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\mesh.h">
@@ -37,6 +37,9 @@
       <Filter>Headers\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\camera.h">
+      <Filter>Headers\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\entity.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
   </ItemGroup>

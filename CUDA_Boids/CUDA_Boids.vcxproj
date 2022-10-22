@@ -101,6 +101,7 @@
     <ClInclude Include="utils\camera.h" />
     <ClInclude Include="utils\cuda_utils.cuh" />
     <ClInclude Include="utils\entity.h" />
+    <ClInclude Include="utils\flock.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\shader.h" />
     <ClInclude Include="utils\window.h" />

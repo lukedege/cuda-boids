@@ -62,6 +62,7 @@ namespace utils::graphics::opengl
 			GLuint      viewport_width   { window_width };
 			GLuint      viewport_height  { window_height };
 			GLboolean   resizable        { GLFW_FALSE };
+			GLboolean   gl_debug         { GLFW_FALSE };
 		};
 
 
@@ -107,7 +108,7 @@ namespace utils::graphics::opengl
 			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, create_info.gl_version_minor);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, create_info.gl_debug);
 			// we set if the window is resizable
 			glfwWindowHint(GLFW_RESIZABLE, create_info.resizable);
 
