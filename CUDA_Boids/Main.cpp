@@ -1,9 +1,8 @@
-﻿#pragma once
-
 // std libraries
 #include <iostream>
 #include <vector>
 #include <string>
+#include <math.h>
 
 // OpenGL libraries
 #ifdef _WIN32
@@ -16,13 +15,15 @@
 #include <glm/gtx/vector_angle.hpp> 
 
 // CUDA libraries
-
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <cuda_gl_interop.h>
 
 // utils libraries
-#include "utils/cuda_utils.cuh"
+#include "utils/CUDA/vector_math.h"
+#include "utils/CUDA/cuda_utils.cuh"
+#include "utils/CUDA/cudaGLmanager.h"
+#include "utils/utils.h"
 #include "utils/window.h"
 #include "utils/shader.h"
 #include "utils/mesh.h"
@@ -30,57 +31,28 @@
 #include "utils/flock.h"
 #include "utils/camera.h"
 
+namespace chk = utils::cuda::checks;
 namespace ugo = utils::graphics::opengl;
 
-/*
-* TODO FOR FLOCKING
-* The entire area is divided into a dense enough, fixed(?) grid of neighbourhoods, 
-*    each of which represents an area in which boids will influence each other
-* We'll have 2 operations to perform the flocking operation 
-* - Firstly, we will calculate for each boid which neighbourhood he belongs to
-*	- To do so, each boid can just evaluate its own position in regards of the grid granularity and identify in which of the neighbourhoods he belongs to
-*	- He will add himself to the list of the boids in that neighbourhood (list in SMEM preferably)
-* - Secondly, we will calculate the new velocity/position for each boid of a neighbourhood, for all neighbourhoods
-*	- It would be comfy to have the list of the boids in each neighbourhood in SMEM since it's a common information for each thread in a block
-*/
 
-__global__ void calculate_positions_gpu_kernel(glm::vec2* positions, float* angles, size_t size,  float delta_time)
+__global__ void test_kernel(float2* ssbo_positions, float* ssbo_angles, size_t size, float delta_time)
 {
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
-	glm::vec2 vel{ -1, 1 };
-	glm::vec2 vel_norm{ glm::normalize(vel) };
-	glm::vec2 x{ 1,0 };
-	//printf("%f, %f, %f\n", delta_time, positions[i].x, positions[i].y);
+	
+	float2 vel{ 1,1 };
+	float2 vel_norm{ normalize(vel) };
+	float2 x{ 1,0 };
+	//printf("%f, %f, %f\n", delta_time, ssbo_positions[i].x, ssbo_positions[i].y);
 	if (i < size)
 	{
-		angles[i] = glm::angle(vel_norm, x); // equivalent to acos(glm::clamp(glm::dot(vel_norm, x), -1.f, 1.f));
-		positions[i] += vel * delta_time;
-		
+		ssbo_angles[i] = acos(clamp(dot(vel_norm, x), -1.f, 1.f));
+		ssbo_positions[i] += vel * delta_time;
 	}
-	
 }
 
-__host__ void calculate_positions_gpu_zero_pinned(size_t grid_size, size_t block_size, glm::vec2* positions, float* angles, size_t size,  float delta_time)
+__host__ void test_cpu(glm::vec2* positions, float* angles, GLuint ssbo_positions, GLuint ssbo_angles, size_t size, float delta_time)
 {
-	calculate_positions_gpu_kernel CUDA_KERNEL(grid_size, block_size)(positions, angles, size, delta_time); // gpu
-	cudaDeviceSynchronize(); // NEVER REMOVE THIS WHEN USING PINNED MEMORY IF YOU CARE ABOUT YOUR PC :)
-}
-
-__host__ void calculate_positions_gpu_unified(size_t grid_size, size_t block_size, glm::vec2* positions, float* angles, size_t size,  float delta_time)
-{
-	calculate_positions_gpu_kernel CUDA_KERNEL(grid_size, block_size)(positions, angles, size, delta_time); // gpu
-	cudaDeviceSynchronize(); // same reason above :)
-}
-
-__host__ void calculate_positions_gpu_transfer(size_t grid_size, size_t block_size, glm::vec2* positions_gpu, glm::vec2* positions_cpu, float* angles, size_t size,  float delta_time)
-{
-	calculate_positions_gpu_kernel CUDA_KERNEL(grid_size, block_size)(positions_gpu, angles, size, delta_time); // gpu
-	cudaMemcpy(positions_cpu, positions_gpu, size * sizeof(glm::vec2), cudaMemcpyDeviceToHost);
-}
-
-__host__ void calculate_positions_cpu(glm::vec2* positions, float* angles, size_t size,  float delta_time)
-{
-	glm::vec2 vel{ -1, 1 };
+	glm::vec2 vel{ 1,1 };
 	glm::vec2 vel_norm{ glm::normalize(vel) };
 	glm::vec2 x{ 1,0 };
 
@@ -89,19 +61,31 @@ __host__ void calculate_positions_cpu(glm::vec2* positions, float* angles, size_
 		angles[i] = glm::angle(vel_norm, x);
 		positions[i] += vel * delta_time;
 	}
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_positions);
+	glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size * sizeof(glm::vec2), positions);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_angles);
+	glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size * sizeof(float), angles);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-__host__ void setup_shader(ugo::Shader& shader, glm::vec2* positions, float* angles, size_t size)
+__host__ void setup_ssbo(GLuint& ssbo, int alloc_size, int bind_index, void* data)
 {
-	for (size_t i = 0; i < size; i++)
-	{
-		shader.setVec2("positions[" + std::to_string(i) + "]", { positions[i].x, positions[i].y });
-		shader.setFloat("angles[" + std::to_string(i) + "]", angles[i]);
-	}
+	glGenBuffers(1, &ssbo);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+	glBufferData     (GL_SHADER_STORAGE_BUFFER, alloc_size, NULL, GL_DYNAMIC_DRAW);// allocate alloc_size bytes of memory
+	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, bind_index, ssbo);
+	
+	if(data != 0)
+		glBufferSubData  (GL_SHADER_STORAGE_BUFFER, 0, alloc_size, data);              // fill buffer object with data
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-
-int mainz()
+int main()
 {
 	ugo::window wdw
 	{
@@ -122,7 +106,7 @@ int mainz()
 	GLFWwindow* glfw_window = wdw.get();
 	auto window_size = wdw.get_size();
 
-	ugo::Shader basic_shader{ "shaders/mvp_instanced.vert", "shaders/basic.frag", {}, 4, 3 };
+	ugo::Shader basic_shader{ "shaders/ssbo_instanced.vert", "shaders/basic.frag", {}, 4, 3 };
 
 	std::vector<ugo::Vertex> vertices
 	{
@@ -136,41 +120,31 @@ int mainz()
 	};
 
 	ugo::Mesh   triangle_mesh{ vertices, indices };
+	
+	
+	GLuint ssbo_positions; // shader_storage_buffer_object
+	GLuint ssbo_angles; // shader_storage_buffer_object
 
-	size_t pos_size = 102400;
-	ugo::Flock triangles{ triangle_mesh, pos_size };
+	size_t amount = 1024;
+
+	int pos_alloc_size = sizeof(glm::vec2) * amount;
+	int ang_alloc_size = sizeof(float) * amount;
+
+	size_t block_size = 32;
+	size_t grid_size = utils::cuda::math::ceil(amount, block_size);
+
+	ugo::Flock triangles{ triangle_mesh, amount };
+	std::vector<float> angles (amount);
 
 	utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
+	
+	setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
+	setup_ssbo(ssbo_angles, ang_alloc_size, 1, 0);
 
-	// CUDA setup
-	size_t alloc_size = pos_size * sizeof(glm::vec2);
-	size_t block_size = 32;
-	size_t grid_size = utils::math::ceil(pos_size, block_size);
+	utils::cuda::gl_manager cuda_gl_manager;
 
-	// Pinned
-	glm::vec2* positions_pinned;
-	cudaHostAlloc(&positions_pinned, alloc_size, cudaHostAllocMapped); ///pinned, with implicit zerocopy unified addressing, usable by both gpu and cpu
-	cudaMemcpy(positions_pinned, triangles.positions.data(), alloc_size, cudaMemcpyHostToHost);
-
-	// Unified 
-	glm::vec2* positions_unified;
-	cudaMallocManaged(&positions_unified, alloc_size, cudaMemAttachGlobal);
-	cudaMemcpy(positions_unified, triangles.positions.data(), alloc_size, cudaMemcpyHostToHost);
-
-	// Normal
-	glm::vec2* positions_cpu;
-	//positions_cpu = (glm::vec2*) malloc(alloc_size);
-	//memcpy(positions_cpu, triangles.positions.data(), alloc_size);
-	cudaMallocHost(&positions_cpu, alloc_size);
-	cudaMemcpy(positions_cpu, triangles.positions.data(), alloc_size, cudaMemcpyHostToHost);
-
-	glm::vec2* positions_gpu;
-	cudaMalloc(&positions_gpu, alloc_size);
-	cudaMemcpy(positions_gpu, triangles.positions.data(), alloc_size, cudaMemcpyHostToDevice);
-
-	// Angles (Unified only for now)
-	float* angles_unified;
-	cudaMallocManaged(&angles_unified, pos_size * sizeof(float), cudaMemAttachGlobal);
+	float2* ssbo_positions_gpu = (float2*) cuda_gl_manager.add_resource(ssbo_positions, cudaGraphicsMapFlagsNone);
+	float * ssbo_angles_gpu    = (float *) cuda_gl_manager.add_resource(ssbo_angles, cudaGraphicsMapFlagsNone);
 
 	// Camera setup
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
@@ -179,11 +153,6 @@ int mainz()
 
 	GLfloat delta_time = 0.0f;
 	GLfloat last_frame = 0.0f;
-
-	int option = 3;
-	glm::vec2* positions_final = nullptr;
-	float* angles_final = nullptr;
-
 	while (wdw.is_open())
 	{
 		// we determine the time passed from the beginning
@@ -200,49 +169,25 @@ int mainz()
 		// we "clear" the frame and z buffer
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		
+
 		GLfloat before_calculations = glfwGetTime();
 
-		switch (option)
-		{
-		case 0:
-			// Pinned gpu (calc time ~40k - 1024000)
-			calculate_positions_gpu_zero_pinned(grid_size, block_size, positions_pinned, angles_unified, pos_size, delta_time);
-			positions_final = positions_pinned;
-			break;
-		case 1:
-			// Transfer gpu (calc time ~3.7k - 1024000)
-			calculate_positions_gpu_transfer   (grid_size, block_size, positions_gpu, positions_cpu, angles_unified, pos_size, delta_time);
-			positions_final = positions_cpu;
-			break;// gpu
-		case 2:
-			// Cpu (calc time ~5.5k - 1024000)
-			calculate_positions_cpu(positions_cpu, angles_unified, pos_size, delta_time);
-			positions_final = positions_cpu;
-			break;// cpu
-		case 3:
-			// Unified gpu (calc time ~1.1k - 1024000)
-			calculate_positions_gpu_unified(grid_size, block_size, positions_unified, angles_unified, pos_size, delta_time);
-			positions_final = positions_unified;
-			break;// gpu
-		}
-		angles_final = angles_unified;
+		test_kernel CUDA_KERNEL(grid_size, block_size)(ssbo_positions_gpu, ssbo_angles_gpu, amount, delta_time);
+		cudaDeviceSynchronize();
+
+		//test_cpu(triangles.positions.data(), angles.data(), ssbo_positions, ssbo_angles, amount, delta_time);
 
 		GLfloat after_calculations = glfwGetTime();
-		GLfloat delta_calculations = after_calculations - before_calculations;
-		std::cout << "Calcs: " << delta_calculations * 1000000 << std::endl;
+		GLfloat delta_calculations = (after_calculations - before_calculations) ;
+		std::cout << "Calcs: " << delta_calculations * 1000 << "ms | ";
 
-		setup_shader(basic_shader, positions_final, angles_final, pos_size);
 		triangles.draw(basic_shader, view_matrix);
 
+		std::cout << "FPS: " << (1 / delta_time) << "\n";
 		glfwSwapBuffers(glfw_window);
 		glfwPollEvents();
-		
 	}
-	
-	cudaFreeHost(positions_pinned);
-	cudaFree(positions_gpu);
-	//free(positions_cpu);
-	cudaFreeHost(positions_cpu);
+
+
 	return 0;
 }

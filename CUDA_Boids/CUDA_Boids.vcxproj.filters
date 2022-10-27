@@ -24,9 +24,6 @@
     <ClInclude Include="utils\window.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\cuda_utils.cuh">
-      <Filter>Headers\utils\CUDA</Filter>
-    </ClInclude>
     <ClInclude Include="utils\flock.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
@@ -42,8 +39,23 @@
     <ClInclude Include="utils\entity.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
+    <ClInclude Include="utils\CUDA\cudaGLmanager.h">
+      <Filter>Headers\utils\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\CUDA\cuda_utils.cuh">
+      <Filter>Headers\utils\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\CUDA\vector_math.h">
+      <Filter>Headers\utils\CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\utils.h">
+      <Filter>Headers\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="old_main.cpp">
+      <Filter>Sources</Filter>
+    </CudaCompile>
     <CudaCompile Include="Main.cpp">
       <Filter>Sources</Filter>
     </CudaCompile>
@@ -51,6 +63,9 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c">
       <Filter>Sources\Libraries</Filter>
+    </ClCompile>
+    <ClCompile Include="quick_tests.cpp">
+      <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -64,6 +79,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\mvp_instanced.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\ssbo_instanced.vert">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

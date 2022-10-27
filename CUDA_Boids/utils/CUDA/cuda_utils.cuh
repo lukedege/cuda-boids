@@ -1,18 +1,17 @@
 #pragma once
 
-#include "cuda_runtime.h"
-#include "cublas.h"
-#include "curand.h"
-#include "cufft.h"
-#include "cusparse.h"
-#include "device_launch_parameters.h"
-
-#include <chrono>
 #include <iostream>
 #include <random>
 #include <cstdlib>
 
-namespace utils
+#include <cuda_runtime.h>
+#include <cublas.h>
+#include <curand.h>
+#include <cufft.h>
+#include <cusparse.h>
+#include <device_launch_parameters.h>
+
+namespace utils::cuda
 {
 	namespace math
 	{
@@ -157,11 +156,6 @@ namespace utils
 			std::cout << "Selected device " << device_index << " " << deviceProp.name;
 			check_cuda_result(cudaSetDevice(device_index));
 		}
-	}
-
-	namespace time
-	{
-		inline double seconds() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
 	}
 }
 

@@ -17,7 +17,7 @@ namespace utils::graphics::opengl
 	class Flock : public Entity
 	{
 	public:
-		std::vector<utils::containers::vec2<float>> positions;
+		std::vector<glm::vec2> positions;
 
 		Flock(std::vector<Vertex>& v, std::vector<GLuint>& i, size_t amount = 1, const glm::mat4& transform = glm::mat4{ 1 }) :
 			Entity{ v, i, transform }, positions{} 
