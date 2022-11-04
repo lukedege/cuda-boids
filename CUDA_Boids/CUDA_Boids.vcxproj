@@ -99,8 +99,14 @@
   <ItemGroup>
     <CudaCompile Include="old_main.cpp" />
     <CudaCompile Include="Main.cpp" />
+    <CudaCompile Include="runners\gpu_angle_based.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="runners\boid_runner.h" />
+    <ClInclude Include="runners\cpu_angle_based.h" />
+    <ClInclude Include="runners\cpu_vel_based.h" />
+    <ClInclude Include="runners\gpu_angle_based.h" />
+    <ClInclude Include="runners\gpu_vel_based.h" />
     <ClInclude Include="utils\camera.h" />
     <ClInclude Include="utils\CUDA\cudaGLmanager.h" />
     <ClInclude Include="utils\CUDA\cuda_utils.cuh" />
@@ -114,14 +120,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
+    <ClCompile Include="new_main.cpp" />
     <ClCompile Include="quick_tests.cpp" />
+    <ClCompile Include="runners\cpu_angle_based.cpp" />
+    <ClCompile Include="runners\cpu_vel_based.cpp" />
+    <CudaCompile Include="runners\gpu_vel_based.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.vert" />
-    <None Include="shaders\ssbo_instanced.vert" />
+    <None Include="shaders\ssbo_instanced_angle.vert" />
     <None Include="shaders\mvp.vert" />
     <None Include="shaders\mvp_instanced.vert" />
+    <None Include="shaders\ssbo_instanced_vel.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

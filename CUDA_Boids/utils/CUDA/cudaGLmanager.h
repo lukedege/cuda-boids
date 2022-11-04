@@ -23,7 +23,7 @@ namespace utils::cuda
 			checks::check_cuda_result(cudaGraphicsMapResources(1, &new_resource, 0));
 			size_t num_bytes;
 
-			checks::check_cuda_result(cudaGraphicsResourceGetMappedPointer((void**)&device_ptr, &num_bytes, new_resource));
+			checks::check_cuda_result(cudaGraphicsResourceGetMappedPointer(&device_ptr, &num_bytes, new_resource));
 			std::cout << "Successfully CUDA mapped buffer: May access" << num_bytes << " bytes\n";
 
 			resources.push_back(new_resource);

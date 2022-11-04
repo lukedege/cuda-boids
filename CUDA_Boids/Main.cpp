@@ -41,11 +41,24 @@ __global__ void test_kernel(float2* ssbo_positions, float* ssbo_angles, size_t s
 	
 	float2 vel{ 1,1 };
 	float2 vel_norm{ normalize(vel) };
-	float2 x{ 1,0 };
+	float2 ref{ 1,0 };
 	//printf("%f, %f, %f\n", delta_time, ssbo_positions[i].x, ssbo_positions[i].y);
 	if (i < size)
 	{
-		ssbo_angles[i] = acos(clamp(dot(vel_norm, x), -1.f, 1.f));
+		ssbo_angles[i] = acos(clamp(dot(vel_norm, ref), -1.f, 1.f));
+		ssbo_positions[i] += vel * delta_time;
+	}
+}
+
+__global__ void test_kernel(float2* ssbo_positions, float2* ssbo_velocities, size_t size, float delta_time)
+{
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	float2 vel{ 1,1 };
+	//printf("%f, %f, %f\n", delta_time, ssbo_positions[i].x, ssbo_positions[i].y);
+	if (i < size)
+	{
+		ssbo_velocities[i] = vel;
 		ssbo_positions[i] += vel * delta_time;
 	}
 }
@@ -71,21 +84,7 @@ __host__ void test_cpu(glm::vec2* positions, float* angles, GLuint ssbo_position
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-__host__ void setup_ssbo(GLuint& ssbo, int alloc_size, int bind_index, void* data)
-{
-	glGenBuffers(1, &ssbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-
-	glBufferData     (GL_SHADER_STORAGE_BUFFER, alloc_size, NULL, GL_DYNAMIC_DRAW);// allocate alloc_size bytes of memory
-	glBindBufferBase (GL_SHADER_STORAGE_BUFFER, bind_index, ssbo);
-	
-	if(data != 0)
-		glBufferSubData  (GL_SHADER_STORAGE_BUFFER, 0, alloc_size, data);              // fill buffer object with data
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-}
-
-int main()
+int mainz()
 {
 	ugo::window wdw
 	{
@@ -106,7 +105,7 @@ int main()
 	GLFWwindow* glfw_window = wdw.get();
 	auto window_size = wdw.get_size();
 
-	ugo::Shader basic_shader{ "shaders/ssbo_instanced.vert", "shaders/basic.frag", {}, 4, 3 };
+	ugo::Shader basic_shader{ "shaders/ssbo_instanced_angle.vert", "shaders/basic.frag", {}, 4, 3 };
 
 	std::vector<ugo::Vertex> vertices
 	{
@@ -138,13 +137,13 @@ int main()
 
 	utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
 	
-	setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-	setup_ssbo(ssbo_angles, ang_alloc_size, 1, 0);
+	utils::gl::setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
+	utils::gl::setup_ssbo(ssbo_angles   , ang_alloc_size, 1, 0);
 
 	utils::cuda::gl_manager cuda_gl_manager;
 
-	float2* ssbo_positions_gpu = (float2*) cuda_gl_manager.add_resource(ssbo_positions, cudaGraphicsMapFlagsNone);
-	float * ssbo_angles_gpu    = (float *) cuda_gl_manager.add_resource(ssbo_angles, cudaGraphicsMapFlagsNone);
+	float2* ssbo_positions_dptr = (float2*) cuda_gl_manager.add_resource(ssbo_positions, cudaGraphicsMapFlagsNone);
+	float * ssbo_angles_dptr    = (float *) cuda_gl_manager.add_resource(ssbo_angles   , cudaGraphicsMapFlagsNone);
 
 	// Camera setup
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
@@ -172,7 +171,7 @@ int main()
 
 		GLfloat before_calculations = glfwGetTime();
 
-		test_kernel CUDA_KERNEL(grid_size, block_size)(ssbo_positions_gpu, ssbo_angles_gpu, amount, delta_time);
+		test_kernel CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_angles_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 
 		//test_cpu(triangles.positions.data(), angles.data(), ssbo_positions, ssbo_angles, amount, delta_time);

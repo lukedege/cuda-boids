@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "entity.h"
 #include "mesh.h"
 #include "shader.h"
 

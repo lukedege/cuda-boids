@@ -28,4 +28,21 @@ namespace utils
 			}
 		}
 	}
+	
+	namespace gl
+	{
+		inline void setup_ssbo(GLuint& ssbo, int alloc_size, int bind_index, void* data)
+		{
+			glGenBuffers(1, &ssbo);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+			glBufferData(GL_SHADER_STORAGE_BUFFER, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_index, ssbo);
+
+			if (data != 0)
+				glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, alloc_size, data);        // fill buffer object with data
+
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		}
+	}
 }
