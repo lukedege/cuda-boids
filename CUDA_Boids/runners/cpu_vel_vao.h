@@ -1,5 +1,5 @@
 #pragma once
-#include "ssbo_runner.h"
+#include "vao_runner.h"
 
 #include "../utils/shader.h"
 #include "../utils/mesh.h"
@@ -7,10 +7,10 @@
 
 namespace utils::runners
 {
-	class cpu_angle_based : public ssbo_runner
+	class cpu_vel_vao : public vao_runner
 	{
 	public:
-		cpu_angle_based(const size_t amount);
+		cpu_vel_vao(const size_t amount);
 
 		void calculate(const float delta_time);
 
@@ -20,10 +20,11 @@ namespace utils::runners
 		utils::graphics::opengl::Shader shader;
 
 		size_t amount;
-		utils::graphics::opengl::Flock triangles;
-		std::vector<float> angles;
+		std::vector<glm::vec3> positions;
+		std::vector<glm::vec3> velocities;
 
-		GLuint ssbo_positions; // shader_storage_buffer_object
-		GLuint ssbo_angles;    // shader_storage_buffer_object
+		GLuint vao;
+		GLuint vbo_positions;
+		GLuint vbo_velocities;
 	};
 }

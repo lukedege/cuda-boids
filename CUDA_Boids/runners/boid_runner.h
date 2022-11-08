@@ -1,8 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
 
-#include "../utils/shader.h"
-
 namespace utils::runners
 {
 	class boid_runner

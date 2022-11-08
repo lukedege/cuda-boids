@@ -1,6 +1,6 @@
 // Fragment shader
 // The output of a fragment shader is the color of the generated fragments
-// #version 410 core
+// #version 430 core
 
 // output variable for the fragment shader. Usually, it is the final color of the fragment
 out vec4 color;

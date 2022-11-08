@@ -13,10 +13,10 @@
 
 namespace utils::runners
 {
-	cpu_angle_based::cpu_angle_based(utils::graphics::opengl::Mesh& mesh, const size_t amount) :
-		shader{ "shaders/ssbo_instanced_angle.vert", "shaders/basic.frag", {}, 4, 3 },
+	cpu_angle_based::cpu_angle_based(const size_t amount) :
+		shader{ "shaders/ssbo_instanced_angle.vert", "shaders/basic.frag"},
 		amount{ amount },
-		triangles{ mesh, amount },
+		triangles{ setup_mesh(), amount },
 		angles { std::vector<float>(amount) }
 	{
 		int pos_alloc_size = sizeof(glm::vec2) * amount;
@@ -24,8 +24,8 @@ namespace utils::runners
 
 		utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
 
-		utils::gl::setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-		utils::gl::setup_ssbo(ssbo_angles, ang_alloc_size, 1, angles.data());
+		setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
+		setup_ssbo(ssbo_angles, ang_alloc_size, 1, angles.data());
 	}
 
 	void cpu_angle_based::calculate(const float delta_time)

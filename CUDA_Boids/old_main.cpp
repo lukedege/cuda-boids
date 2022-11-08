@@ -1,4 +1,4 @@
-﻿// std libraries
+﻿/* std libraries
 #include <iostream>
 #include <vector>
 #include <string>
@@ -41,7 +41,7 @@ namespace ugo = utils::graphics::opengl;
 *	- He will add himself to the list of the boids in that neighbourhood (list in SMEM preferably)
 * - Secondly, we will calculate the new velocity/position for each boid of a neighbourhood, for all neighbourhoods
 *	- It would be comfy to have the list of the boids in each neighbourhood in SMEM since it's a common information for each thread in a block
-*/
+*
 
 __global__ void calculate_positions_gpu_kernel(glm::vec2* positions, float* angles, size_t size,  float delta_time)
 {
@@ -123,7 +123,7 @@ int maind()
 	GLFWwindow* glfw_window = wdw.get();
 	auto window_size = wdw.get_size();
 
-	ugo::Shader basic_shader{ "shaders/mvp_instanced.vert", "shaders/basic.frag", {}, 4, 3 };
+	ugo::Shader basic_shader{ "shaders/mvp_instanced.vert", "shaders/basic.frag", "", {}, 4, 3 };
 
 	std::vector<ugo::Vertex> vertices
 	{
@@ -246,4 +246,4 @@ int maind()
 	//free(positions_cpu);
 	cudaFreeHost(positions_cpu);
 	return 0;
-}
+}*/

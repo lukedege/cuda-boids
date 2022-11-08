@@ -21,9 +21,11 @@ namespace utils::graphics::opengl
 	public:
 		GLuint program;
 
-		Shader(const GLchar* vertPath, const GLchar* fragPath, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 1) :
+		Shader(const GLchar* vertPath, const GLchar* fragPath, const GLchar* geomPath = 0, std::vector<const GLchar*> utilPaths = {}, GLuint glMajor = 4, GLuint glMinor = 3) :
 			program{ glCreateProgram() }, glMajorVersion{ glMajor }, glMinorVersion{ glMinor }
 		{
+			GLuint vertexShader, fragmentShader, geometryShader;
+
 			const std::string vertSource = loadSource(vertPath);
 			const std::string fragSource = loadSource(fragPath);
 
@@ -34,20 +36,30 @@ namespace utils::graphics::opengl
 				utilsSource += loadSource(utilPath) + "\n";
 			}
 
-			GLuint   vertexShader = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
-			GLuint fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
+			vertexShader   = compileShader(vertSource, GL_VERTEX_SHADER, utilsSource);
+			fragmentShader = compileShader(fragSource, GL_FRAGMENT_SHADER, utilsSource);
 
 			glAttachShader(program, vertexShader);
 			glAttachShader(program, fragmentShader);
+
+			if (geomPath)
+			{
+				const std::string geomSource = loadSource(geomPath);
+				geometryShader = compileShader(geomSource, GL_GEOMETRY_SHADER, utilsSource);
+				glAttachShader(program, geometryShader);
+			}
 
 			try {
 				glLinkProgram(program);
 			}
 			catch (std::exception e) { auto x = glGetError(); checkLinkingErrors(); std::cout << e.what(); }
+			checkLinkingErrors();
 
 			glDeleteShader(vertexShader);
 			glDeleteShader(fragmentShader);
-		}
+
+			if (geomPath) { glDeleteShader(geometryShader); }
+		}	
 
 		~Shader() { glDeleteProgram(program); }
 
@@ -135,22 +147,26 @@ namespace utils::graphics::opengl
 
 		const std::string loadSource(const GLchar* sourcePath) const noexcept
 		{
-			std::string         sourceCode;
-			std::ifstream       sourceFile;
-			std::stringstream sourceStream;
+			std::string         sourceCode = "";
 
-			sourceFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+			if (sourcePath[0] != '\0')
+			{
+				std::ifstream       sourceFile;
+				std::stringstream   sourceStream;
 
-			try
-			{
-				sourceFile.open(sourcePath);
-				sourceStream << sourceFile.rdbuf();
-				sourceFile.close();
-				sourceCode = sourceStream.str();
-			}
-			catch (const std::exception& e)
-			{
-				std::cerr << e.what() << '\n';
+				sourceFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+				try
+				{
+					sourceFile.open(sourcePath);
+					sourceStream << sourceFile.rdbuf();
+					sourceFile.close();
+					sourceCode = sourceStream.str();
+				}
+				catch (const std::exception& e)
+				{
+					std::cerr << e.what() << '\n';
+				}
 			}
 
 			return sourceCode;

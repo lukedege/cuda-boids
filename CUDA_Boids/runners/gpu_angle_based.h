@@ -1,5 +1,5 @@
 #pragma once
-#include "boid_runner.h"
+#include "ssbo_runner.h"
 
 #include "../utils/CUDA/cudaGLmanager.h"
 #include "../utils/shader.h"
@@ -8,10 +8,10 @@
 
 namespace utils::runners
 {
-	class gpu_angle_based : public boid_runner
+	class gpu_angle_based : public ssbo_runner
 	{
 	public:
-		gpu_angle_based(utils::graphics::opengl::Mesh& mesh, const size_t amount);
+		gpu_angle_based(const size_t amount);
 
 		void calculate(const float delta_time);
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "boid_runner.h"
+#include "ssbo_runner.h"
 
 #include "../utils/shader.h"
 #include "../utils/mesh.h"
@@ -7,10 +7,10 @@
 
 namespace utils::runners
 {
-	class cpu_vel_based : public boid_runner
+	class cpu_vel_based : public ssbo_runner
 	{
 	public:
-		cpu_vel_based(utils::graphics::opengl::Mesh& mesh, const size_t amount);
+		cpu_vel_based(const size_t amount);
 
 		void calculate(const float delta_time);
 

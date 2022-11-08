@@ -39,10 +39,10 @@ namespace
 
 namespace utils::runners
 {
-	gpu_angle_based::gpu_angle_based(utils::graphics::opengl::Mesh& mesh, const size_t amount) :
-		shader { "shaders/ssbo_instanced_angle.vert", "shaders/basic.frag", {}, 4, 3 },
+	gpu_angle_based::gpu_angle_based(const size_t amount) :
+		shader { "shaders/ssbo_instanced_angle.vert", "shaders/basic.frag"},
 		amount{ amount },
-		triangles{ mesh, amount },
+		triangles{ setup_mesh(), amount },
 		block_size{ 32 },
 		grid_size{ static_cast<size_t>(utils::cuda::math::ceil(amount, block_size)) },
 		ssbo_positions_dptr{ nullptr },
@@ -58,8 +58,8 @@ namespace utils::runners
 
 		utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
 
-		utils::gl::setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-		utils::gl::setup_ssbo(ssbo_angles, ang_alloc_size, 1, 0);
+		setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
+		setup_ssbo(ssbo_angles, ang_alloc_size, 1, 0);
 
 		ssbo_positions_dptr = (float2*)cuda_gl_manager.add_resource(ssbo_positions, cudaGraphicsMapFlagsNone);
 		ssbo_angles_dptr = (float*)cuda_gl_manager.add_resource(ssbo_angles, cudaGraphicsMapFlagsNone);

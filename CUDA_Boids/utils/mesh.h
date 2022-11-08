@@ -12,6 +12,7 @@ namespace utils::graphics::opengl
 	struct Vertex
 	{
 		glm::vec3 position;
+		//other properties
 	};
 
 	class Mesh

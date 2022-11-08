@@ -25,6 +25,30 @@
     <Filter Include="Sources\Runners">
       <UniqueIdentifier>{dad3d1af-7ecd-4edc-8cf9-b86ddcf0e5e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sources\old">
+      <UniqueIdentifier>{fba5e1c9-c265-4a66-bf44-517fe14b7dd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\vao">
+      <UniqueIdentifier>{9d66c67a-5c08-47ac-b2a9-f2ab7047d414}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\basic">
+      <UniqueIdentifier>{5871c121-0d08-4f76-a706-9a505c7ece9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\ssbo">
+      <UniqueIdentifier>{3b3d6ae5-586e-4b21-846a-9945c92f6a4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\runners\ssbo_runners">
+      <UniqueIdentifier>{ec27ce8f-df61-4142-9590-df6a6ca3f078}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers\runners\vao_runners">
+      <UniqueIdentifier>{9f8f2811-57b2-408e-b597-3b05007c573f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sources\Runners\ssbo_runners">
+      <UniqueIdentifier>{6831866f-e981-44f6-9d5a-e3f42037cff6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sources\Runners\vao_runners">
+      <UniqueIdentifier>{1baf4d36-49d1-4f2b-b192-4aa0b1e7c10d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\window.h">
@@ -60,31 +84,40 @@
     <ClInclude Include="runners\boid_runner.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\gpu_angle_based.h">
+    <ClInclude Include="runners\ssbo_runner.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\cpu_angle_based.h">
+    <ClInclude Include="runners\vao_runner.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
     <ClInclude Include="runners\gpu_vel_based.h">
-      <Filter>Headers\runners</Filter>
+      <Filter>Headers\runners\ssbo_runners</Filter>
+    </ClInclude>
+    <ClInclude Include="runners\cpu_angle_based.h">
+      <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
     <ClInclude Include="runners\cpu_vel_based.h">
-      <Filter>Headers\runners</Filter>
+      <Filter>Headers\runners\ssbo_runners</Filter>
+    </ClInclude>
+    <ClInclude Include="runners\gpu_angle_based.h">
+      <Filter>Headers\runners\ssbo_runners</Filter>
+    </ClInclude>
+    <ClInclude Include="runners\cpu_vel_vao.h">
+      <Filter>Headers\runners\vao_runners</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="old_main.cpp">
-      <Filter>Sources</Filter>
+    <CudaCompile Include="old_main2.cpp">
+      <Filter>Sources\old</Filter>
     </CudaCompile>
-    <CudaCompile Include="Main.cpp">
-      <Filter>Sources</Filter>
+    <CudaCompile Include="old_main.cpp">
+      <Filter>Sources\old</Filter>
     </CudaCompile>
     <CudaCompile Include="runners\gpu_angle_based.cpp">
-      <Filter>Sources\Runners</Filter>
+      <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
     <CudaCompile Include="runners\gpu_vel_based.cpp">
-      <Filter>Sources\Runners</Filter>
+      <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -94,34 +127,46 @@
     <ClCompile Include="quick_tests.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="new_main.cpp">
+    <ClCompile Include="Main.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="runners\cpu_angle_based.cpp">
-      <Filter>Sources\Runners</Filter>
+      <Filter>Sources\Runners\ssbo_runners</Filter>
     </ClCompile>
     <ClCompile Include="runners\cpu_vel_based.cpp">
-      <Filter>Sources\Runners</Filter>
+      <Filter>Sources\Runners\ssbo_runners</Filter>
+    </ClCompile>
+    <ClCompile Include="runners\cpu_vel_vao.cpp">
+      <Filter>Sources\Runners\vao_runners</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\basic.frag">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\basic.vert">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="shaders\mvp.vert">
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\mvp_instanced.vert">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="shaders\ssbo_instanced_angle.vert">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="shaders\ssbo_instanced_vel.vert">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\ssbo</Filter>
+    </None>
+    <None Include="shaders\ssbo_instanced_angle.vert">
+      <Filter>Shaders\ssbo</Filter>
+    </None>
+    <None Include="shaders\basic.vert">
+      <Filter>Shaders\basic</Filter>
+    </None>
+    <None Include="shaders\basic.frag">
+      <Filter>Shaders\basic</Filter>
+    </None>
+    <None Include="shaders\basic.geom">
+      <Filter>Shaders\basic</Filter>
+    </None>
+    <None Include="shaders\vao.geom">
+      <Filter>Shaders\vao</Filter>
+    </None>
+    <None Include="shaders\vao.vert">
+      <Filter>Shaders\vao</Filter>
     </None>
   </ItemGroup>
 </Project>

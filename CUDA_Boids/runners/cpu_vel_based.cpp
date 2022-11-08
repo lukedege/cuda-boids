@@ -13,10 +13,10 @@
 
 namespace utils::runners
 {
-	cpu_vel_based::cpu_vel_based(utils::graphics::opengl::Mesh& mesh, const size_t amount) :
-		shader{ "shaders/ssbo_instanced_vel.vert", "shaders/basic.frag", {}, 4, 3 },
+	cpu_vel_based::cpu_vel_based(const size_t amount) :
+		shader{ "shaders/ssbo_instanced_vel.vert", "shaders/basic.frag"},
 		amount{ amount },
-		triangles { mesh, amount },
+		triangles { setup_mesh(), amount },
 		velocities{ std::vector<glm::vec2>(amount) }
 	{
 		int pos_alloc_size = sizeof(glm::vec2) * amount;
@@ -24,8 +24,8 @@ namespace utils::runners
 
 		utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
 
-		utils::gl::setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-		utils::gl::setup_ssbo(ssbo_velocities, ang_alloc_size, 1, velocities.data());
+		setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
+		setup_ssbo(ssbo_velocities, ang_alloc_size, 1, velocities.data());
 	}
 
 	void cpu_vel_based::calculate(const float delta_time)

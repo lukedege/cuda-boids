@@ -27,22 +27,18 @@ namespace utils
 				arr[i][1] = distr(generator);
 			}
 		}
-	}
-	
-	namespace gl
-	{
-		inline void setup_ssbo(GLuint& ssbo, int alloc_size, int bind_index, void* data)
+		inline void random_vec3_fill_cpu(std::vector<glm::vec3>& arr, const int range_from, const int range_to)
 		{
-			glGenBuffers(1, &ssbo);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+			std::random_device                  rand_dev;
+			std::mt19937                        generator(rand_dev());
+			std::uniform_int_distribution<int>  distr(range_from, range_to);
 
-			glBufferData(GL_SHADER_STORAGE_BUFFER, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_index, ssbo);
-
-			if (data != 0)
-				glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, alloc_size, data);        // fill buffer object with data
-
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+			for (size_t i = 0; i < arr.size(); i++)
+			{
+				arr[i][0] = distr(generator);
+				arr[i][1] = distr(generator);
+				arr[i][2] = distr(generator);
+			}
 		}
 	}
 }
