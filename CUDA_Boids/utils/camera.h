@@ -5,17 +5,12 @@
 
 namespace utils::graphics::opengl
 {
-	enum camdir
-	{
-		FORWARD, BACKWARD, LEFT, RIGHT
-	};
-
 	const float YAW = -90.f;
 	const float PITCH = 0.f;
 	const float ROLL = 0.f;
 
-	const float SPEED = 3.f;
-	const float SENSITIVITY = 0.25f;
+	const float SPEED = 6.f;
+	const float SENSITIVITY = 0.05f;
 
 	class Camera
 	{
@@ -28,6 +23,11 @@ namespace utils::graphics::opengl
 		bool on_ground;
 
 	public:
+		enum Directions
+		{
+			FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
+		};
+
 		Camera(glm::vec3 pos, bool on_ground) : pos(pos), on_ground(on_ground),
 			yaw(YAW), pitch(PITCH), roll(ROLL),
 			mov_speed(SPEED), mouse_sensitivity(SENSITIVITY)
@@ -40,25 +40,33 @@ namespace utils::graphics::opengl
 			return glm::lookAt(pos, pos + front, up);
 		}
 
-		void ProcessKeyboard(camdir dir, float deltaTime)
+		void ProcessKeyboard(Directions dir, float deltaTime)
 		{
 			float vel = mov_speed * deltaTime;
 
-			if (dir == camdir::FORWARD)
+			if (dir == Directions::FORWARD)
 			{
 				pos += (on_ground ? world_front : front) * vel;
 			}
-			if (dir == camdir::BACKWARD)
+			if (dir == Directions::BACKWARD)
 			{
 				pos -= (on_ground ? world_front : front) * vel;
 			}
-			if (dir == camdir::LEFT)
+			if (dir == Directions::LEFT)
 			{
 				pos -= right * vel;
 			}
-			if (dir == camdir::RIGHT)
+			if (dir == Directions::RIGHT)
 			{
 				pos += right * vel;
+			}
+			if (dir == Directions::UP)
+			{
+				pos += up * vel;
+			}
+			if (dir == Directions::DOWN)
+			{
+				pos -= up * vel;
 			}
 		}
 

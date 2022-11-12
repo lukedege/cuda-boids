@@ -16,34 +16,32 @@ namespace utils::runners
 	cpu_vel_based::cpu_vel_based(const size_t amount) :
 		shader{ "shaders/ssbo_instanced_vel.vert", "shaders/basic.frag"},
 		amount{ amount },
-		triangles { setup_mesh(), amount },
-		velocities{ std::vector<glm::vec2>(amount) }
+		triangle_mesh{ setup_mesh() },
+		positions { std::vector<glm::vec4>(amount) },
+		velocities{ std::vector<glm::vec4>(amount) }
 	{
-		int pos_alloc_size = sizeof(glm::vec2) * amount;
-		int ang_alloc_size = pos_alloc_size;
+		utils::containers::random_vec4_fill_cpu(positions, -20, 20);
 
-		utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
-
-		setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-		setup_ssbo(ssbo_velocities, ang_alloc_size, 1, velocities.data());
+		setup_ssbo(ssbo_positions , sizeof(glm::vec4), amount, 0, positions.data());
+		setup_ssbo(ssbo_velocities, sizeof(glm::vec4), amount, 1, velocities.data());
 	}
 
 	void cpu_vel_based::calculate(const float delta_time)
 	{
-		glm::vec2 vel{ 1,1 };
+		glm::vec4 vel{ 1,1,0,0 };
 
 		for (size_t i = 0; i < amount; i++)
 		{
-			velocities[i]    = vel;
-			triangles.positions[i] += vel * delta_time;
+			velocities[i]    = vel * delta_time;
+			positions [i] += velocities[i];
 		}
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_positions);
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec2), triangles.positions.data());
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec4), positions.data());
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_velocities);
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec2), velocities.data());
-
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec4), velocities.data());
+		
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	}
 
@@ -52,6 +50,6 @@ namespace utils::runners
 		shader.use();
 		shader.setMat4("view_matrix", view_matrix);
 		shader.setMat4("projection_matrix", projection_matrix);
-		triangles.draw(shader, view_matrix);
+		triangle_mesh.draw_instanced(amount);
 	}
 }

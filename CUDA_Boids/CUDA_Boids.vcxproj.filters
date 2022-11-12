@@ -105,6 +105,9 @@
     <ClInclude Include="runners\cpu_vel_vao.h">
       <Filter>Headers\runners\vao_runners</Filter>
     </ClInclude>
+    <ClInclude Include="runners\gpu_vel_vao.h">
+      <Filter>Headers\runners\vao_runners</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="old_main2.cpp">
@@ -118,6 +121,9 @@
     </CudaCompile>
     <CudaCompile Include="runners\gpu_vel_based.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
+    </CudaCompile>
+    <CudaCompile Include="runners\gpu_vel_vao.cpp">
+      <Filter>Sources\Runners\vao_runners</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

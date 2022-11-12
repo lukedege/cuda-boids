@@ -19,9 +19,6 @@ namespace utils::runners
 		positions { std::vector<glm::vec3>(amount) },
 		velocities{ std::vector<glm::vec3>(amount) }
 	{
-		int pos_alloc_size = sizeof(glm::vec2) * amount;
-		int ang_alloc_size = pos_alloc_size;
-
 		utils::containers::random_vec3_fill_cpu(positions , -20, 20);
 		//utils::containers::random_vec3_fill_cpu(velocities, -2, 2);
 
@@ -43,13 +40,13 @@ namespace utils::runners
 			positions[i] += velocities[i] * delta_time;
 		}
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_positions);
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec3), positions.data());
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_positions);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, amount * sizeof(glm::vec3), positions.data());
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, vbo_velocities);
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec3), velocities.data());
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_velocities);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, amount * sizeof(glm::vec3), velocities.data());
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
 	void cpu_vel_vao::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)

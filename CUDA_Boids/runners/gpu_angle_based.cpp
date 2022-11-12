@@ -51,15 +51,12 @@ namespace utils::runners
 		GLuint ssbo_positions; // shader_storage_buffer_object
 		GLuint ssbo_angles; // shader_storage_buffer_object
 
-		int pos_alloc_size = sizeof(glm::vec2) * amount;
-		int ang_alloc_size = sizeof(float) * amount;
-
 		std::vector<float> angles(amount);
 
 		utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
 
-		setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-		setup_ssbo(ssbo_angles, ang_alloc_size, 1, 0);
+		setup_ssbo(ssbo_positions, sizeof(glm::vec2), amount, 0, triangles.positions.data());
+		setup_ssbo(ssbo_angles   , sizeof(float)    , amount, 1, 0);
 
 		ssbo_positions_dptr = (float2*)cuda_gl_manager.add_resource(ssbo_positions, cudaGraphicsMapFlagsNone);
 		ssbo_angles_dptr = (float*)cuda_gl_manager.add_resource(ssbo_angles, cudaGraphicsMapFlagsNone);

@@ -37,9 +37,20 @@
 #include "runners/cpu_angle_based.h"
 #include "runners/cpu_vel_based.h"
 #include "runners/cpu_vel_vao.h"
+#include "runners/gpu_vel_vao.h"
 
 namespace chk = utils::cuda::checks;
 namespace ugo = utils::graphics::opengl;
+
+// input stuff TODO: MOVE SOMEWHERE ELSE
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos);
+void process_camera_input(ugo::Camera& cam, GLfloat delta_time);
+
+GLfloat last_x, last_y, x_offset, y_offset;
+bool first_mouse = true;
+
+bool keys[1024];
 
 int main()
 {
@@ -62,13 +73,20 @@ int main()
 	GLFWwindow* glfw_window = wdw.get();
 	auto window_size = wdw.get_size();
 
+	// setup callbacks
+	glfwSetKeyCallback(glfw_window, key_callback);
+	//glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+
+	// we disable the mouse cursor
+	//glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 	// Runner setup
-	size_t amount = 1024;
-	utils::runners::cpu_vel_vao spec_runner{ amount };
+	size_t amount = 1024000;
+	utils::runners::cpu_vel_based spec_runner{ amount };
 	utils::runners::boid_runner* runner = &spec_runner;
 
 	// Camera setup
-	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
+	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_FALSE };
 	glm::mat4 projection_matrix = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
 
@@ -84,6 +102,8 @@ int main()
 		delta_time = currentFrame - last_frame;
 		last_frame = currentFrame;
 
+		glfwPollEvents();
+		process_camera_input(camera, delta_time);
 		view_matrix = camera.GetViewMatrix();
 
 		// we "clear" the frame and z buffer
@@ -96,21 +116,60 @@ int main()
 
 		GLfloat after_calculations = glfwGetTime();
 		GLfloat delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
-		std::cout << "Calcs: " << delta_calculations << "ms | ";
+		//std::cout << "Calcs: " << delta_calculations << "ms | ";
 
 		runner->draw(view_matrix, projection_matrix);
 
 		current_fps = (1 / delta_time);
-		std::cout << "FPS: " << current_fps << "\n";
+		//std::cout << "FPS: " << current_fps << "\n";
 		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
 		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
 
 		glfwSwapBuffers(glfw_window);
-		glfwPollEvents();
 	}
 	std::cout << "-----------------------------------\n";
 	std::cout << "Average FPS  : " << avg_fps << "\n";
 	std::cout << "Average calcs: " << avg_calc << "ms \n";
 
 	return 0;
+}
+
+void process_camera_input(ugo::Camera& cam, GLfloat delta_time)
+{
+	cam.ProcessMouseMovement(x_offset, y_offset);
+	x_offset = 0; y_offset = 0;
+	if (keys[GLFW_KEY_Q])
+		cam.ProcessKeyboard(ugo::Camera::Directions::BACKWARD, delta_time);
+	if (keys[GLFW_KEY_E])
+		cam.ProcessKeyboard(ugo::Camera::Directions::FORWARD, delta_time);
+	if (keys[GLFW_KEY_A])
+		cam.ProcessKeyboard(ugo::Camera::Directions::LEFT, delta_time);
+	if (keys[GLFW_KEY_D])
+		cam.ProcessKeyboard(ugo::Camera::Directions::RIGHT, delta_time);
+	if (keys[GLFW_KEY_W])
+		cam.ProcessKeyboard(ugo::Camera::Directions::UP, delta_time);
+	if (keys[GLFW_KEY_S])
+		cam.ProcessKeyboard(ugo::Camera::Directions::DOWN, delta_time);
+}
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+{
+	if (action == GLFW_PRESS)
+		keys[key] = true;
+	else if (action == GLFW_RELEASE)
+		keys[key] = false;
+}
+void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
+{
+	if (first_mouse)
+	{
+		last_x = x_pos;
+		last_y = y_pos;
+		first_mouse = false;
+	}
+
+	x_offset = x_pos - last_x;
+	y_offset = last_y - y_pos;
+
+	last_x = x_pos;
+	last_y = y_pos;
 }

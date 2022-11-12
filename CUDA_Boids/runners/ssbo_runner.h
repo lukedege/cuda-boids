@@ -22,11 +22,12 @@ namespace utils::runners
 			return utils::graphics::opengl::Mesh(vertices, indices);
 		}
 
-		inline void setup_ssbo(GLuint& ssbo, int alloc_size, int bind_index, void* data)
+		inline void setup_ssbo(GLuint& ssbo, size_t element_size, size_t element_amount, int bind_index, void* data)
 		{
 			glGenBuffers(1, &ssbo);
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 
+			size_t alloc_size = element_size * element_amount;
 			glBufferData(GL_SHADER_STORAGE_BUFFER, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_index, ssbo);
 

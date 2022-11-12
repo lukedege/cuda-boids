@@ -108,6 +108,7 @@
     <ClInclude Include="runners\cpu_vel_vao.h" />
     <ClInclude Include="runners\gpu_angle_based.h" />
     <ClInclude Include="runners\gpu_vel_based.h" />
+    <ClInclude Include="runners\gpu_vel_vao.h" />
     <ClInclude Include="runners\ssbo_runner.h" />
     <ClInclude Include="runners\vao_runner.h" />
     <ClInclude Include="utils\camera.h" />
@@ -128,6 +129,7 @@
     <ClCompile Include="runners\cpu_angle_based.cpp" />
     <ClCompile Include="runners\cpu_vel_based.cpp" />
     <ClCompile Include="runners\cpu_vel_vao.cpp" />
+    <CudaCompile Include="runners\gpu_vel_vao.cpp" />
     <CudaCompile Include="runners\gpu_vel_based.cpp" />
   </ItemGroup>
   <ItemGroup>

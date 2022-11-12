@@ -40,5 +40,19 @@ namespace utils
 				arr[i][2] = distr(generator);
 			}
 		}
+		inline void random_vec4_fill_cpu(std::vector<glm::vec4>& arr, const int range_from, const int range_to)
+		{
+			std::random_device                  rand_dev;
+			std::mt19937                        generator(rand_dev());
+			std::uniform_int_distribution<int>  distr(range_from, range_to);
+
+			for (size_t i = 0; i < arr.size(); i++)
+			{
+				arr[i][0] = distr(generator);
+				arr[i][1] = distr(generator);
+				arr[i][2] = distr(generator);
+				arr[i][3] = 0;
+			}
+		}
 	}
 }

@@ -19,13 +19,10 @@ namespace utils::runners
 		triangles{ setup_mesh(), amount },
 		angles { std::vector<float>(amount) }
 	{
-		int pos_alloc_size = sizeof(glm::vec2) * amount;
-		int ang_alloc_size = sizeof(float)     * amount;
-
 		utils::containers::random_vec2_fill_cpu(triangles.positions, -20, 20);
 
-		setup_ssbo(ssbo_positions, pos_alloc_size, 0, triangles.positions.data());
-		setup_ssbo(ssbo_angles, ang_alloc_size, 1, angles.data());
+		setup_ssbo(ssbo_positions, sizeof(glm::vec2), amount, 0, triangles.positions.data());
+		setup_ssbo(ssbo_angles   , sizeof(float)    , amount, 1, angles.data());
 	}
 
 	void cpu_angle_based::calculate(const float delta_time)

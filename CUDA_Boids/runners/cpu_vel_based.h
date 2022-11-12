@@ -20,10 +20,11 @@ namespace utils::runners
 		utils::graphics::opengl::Shader shader;
 
 		size_t amount;
-		utils::graphics::opengl::Flock triangles;
-		std::vector<glm::vec2> velocities;
+		utils::graphics::opengl::Mesh triangle_mesh;
+		std::vector<glm::vec4> positions;
+		std::vector<glm::vec4> velocities;
 
-		GLuint ssbo_positions; // shader_storage_buffer_object
-		GLuint ssbo_velocities;    // shader_storage_buffer_object
+		GLuint ssbo_positions;  // shader_storage_buffer_object
+		GLuint ssbo_velocities; // shader_storage_buffer_object
 	};
 }
