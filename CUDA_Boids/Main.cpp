@@ -32,10 +32,10 @@
 #include "utils/flock.h"
 #include "utils/camera.h"
 
-#include "runners/gpu_angle_based.h"
-#include "runners/gpu_vel_based.h"
-#include "runners/cpu_angle_based.h"
-#include "runners/cpu_vel_based.h"
+#include "runners/gpu_angle_ssbo.h"
+#include "runners/gpu_vel_ssbo.h"
+#include "runners/cpu_angle_ssbo.h"
+#include "runners/cpu_vel_ssbo.h"
 #include "runners/cpu_vel_vao.h"
 #include "runners/gpu_vel_vao.h"
 
@@ -75,22 +75,23 @@ int main()
 
 	// setup callbacks
 	glfwSetKeyCallback(glfw_window, key_callback);
-	//glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 
 	// we disable the mouse cursor
-	//glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
+	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	
 	// Runner setup
-	size_t amount = 1024000;
-	utils::runners::cpu_vel_based spec_runner{ amount };
+	size_t amount = 1024;
+	utils::runners::cpu_vel_ssbo spec_runner{ amount };
 	utils::runners::boid_runner* runner = &spec_runner;
-
+	
 	// Camera setup
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_FALSE };
 	glm::mat4 projection_matrix = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
 
 	GLfloat delta_time = 0.0f, last_frame = 0.0f, current_fps = 0.0f;
+	GLfloat before_calculations = 0.0f, after_calculations = 0.0f, delta_calculations = 0.0f;
 	GLfloat avg_calc = 1.f, avg_fps = 1.f;
 	GLfloat alpha = 0.9;
 	std::cout << std::setprecision(4) << std::fixed;
@@ -110,17 +111,17 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		GLfloat before_calculations = glfwGetTime();
+		before_calculations = glfwGetTime();
 
 		runner->calculate(delta_time);
 
-		GLfloat after_calculations = glfwGetTime();
-		GLfloat delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
-		//std::cout << "Calcs: " << delta_calculations << "ms | ";
+		after_calculations = glfwGetTime();
+		delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
 
 		runner->draw(view_matrix, projection_matrix);
 
 		current_fps = (1 / delta_time);
+		//std::cout << "Calcs: " << delta_calculations << "ms | ";
 		//std::cout << "FPS: " << current_fps << "\n";
 		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
 		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);

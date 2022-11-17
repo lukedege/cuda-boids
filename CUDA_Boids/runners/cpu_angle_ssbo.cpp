@@ -1,4 +1,4 @@
-#include "cpu_angle_based.h"
+#include "cpu_angle_ssbo.h"
 
 // std libraries
 #include <vector>
@@ -13,7 +13,7 @@
 
 namespace utils::runners
 {
-	cpu_angle_based::cpu_angle_based(const size_t amount) :
+	cpu_angle_ssbo::cpu_angle_ssbo(const size_t amount) :
 		shader{ "shaders/ssbo_instanced_angle.vert", "shaders/basic.frag"},
 		amount{ amount },
 		triangles{ setup_mesh(), amount },
@@ -25,7 +25,7 @@ namespace utils::runners
 		setup_ssbo(ssbo_angles   , sizeof(float)    , amount, 1, angles.data());
 	}
 
-	void cpu_angle_based::calculate(const float delta_time)
+	void cpu_angle_ssbo::calculate(const float delta_time)
 	{
 		glm::vec2 vel{ 1,1 };
 		glm::vec2 vel_norm{ glm::normalize(vel) };
@@ -46,7 +46,7 @@ namespace utils::runners
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 	}
 
-	void cpu_angle_based::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
+	void cpu_angle_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
 	{
 		shader.use();
 		shader.setMat4("view_matrix", view_matrix);

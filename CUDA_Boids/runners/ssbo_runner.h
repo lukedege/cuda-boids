@@ -15,8 +15,8 @@ namespace utils::runners
 			std::vector<utils::graphics::opengl::Vertex> vertices
 			{
 				{{  0.0f,  0.5f, 0.0f,}},
-				{{  0.5f, -0.5f, 0.0f }},
-				{{ -0.5f, -0.5f, 0.0f }}
+				{{  0.3f, -0.3f, 0.0f }},
+				{{ -0.3f, -0.3f, 0.0f }}
 			};
 			std::vector<GLuint>  indices {0, 1, 2};
 			return utils::graphics::opengl::Mesh(vertices, indices);

@@ -1,4 +1,4 @@
-#include "gpu_vel_based.h"
+#include "gpu_vel_ssbo.h"
 
 // std libraries
 #include <iostream>
@@ -37,7 +37,7 @@ namespace
 
 namespace utils::runners
 {
-	gpu_vel_based::gpu_vel_based(const size_t amount) :
+	gpu_vel_ssbo::gpu_vel_ssbo(const size_t amount) :
 		shader{ "shaders/ssbo_instanced_vel.vert", "shaders/basic.frag"},
 		amount{ amount },
 		triangle_mesh{setup_mesh()},
@@ -60,13 +60,13 @@ namespace utils::runners
 		ssbo_velocities_dptr = (float4*)cuda_gl_manager.add_resource(ssbo_velocities, cudaGraphicsMapFlagsNone);
 	}
 
-	void gpu_vel_based::calculate(const float delta_time)
+	void gpu_vel_ssbo::calculate(const float delta_time)
 	{
 		kernel CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
 
-	void gpu_vel_based::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
+	void gpu_vel_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
 	{
 		shader.use();
 		shader.setMat4("view_matrix", view_matrix);

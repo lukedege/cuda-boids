@@ -90,16 +90,16 @@
     <ClInclude Include="runners\vao_runner.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\gpu_vel_based.h">
+    <ClInclude Include="runners\gpu_vel_ssbo.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\cpu_angle_based.h">
+    <ClInclude Include="runners\cpu_angle_ssbo.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\cpu_vel_based.h">
+    <ClInclude Include="runners\cpu_vel_ssbo.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\gpu_angle_based.h">
+    <ClInclude Include="runners\gpu_angle_ssbo.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
     <ClInclude Include="runners\cpu_vel_vao.h">
@@ -116,10 +116,10 @@
     <CudaCompile Include="old_main.cpp">
       <Filter>Sources\old</Filter>
     </CudaCompile>
-    <CudaCompile Include="runners\gpu_angle_based.cpp">
+    <CudaCompile Include="runners\gpu_angle_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
-    <CudaCompile Include="runners\gpu_vel_based.cpp">
+    <CudaCompile Include="runners\gpu_vel_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
     <CudaCompile Include="runners\gpu_vel_vao.cpp">
@@ -136,10 +136,10 @@
     <ClCompile Include="Main.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="runners\cpu_angle_based.cpp">
+    <ClCompile Include="runners\cpu_angle_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </ClCompile>
-    <ClCompile Include="runners\cpu_vel_based.cpp">
+    <ClCompile Include="runners\cpu_vel_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </ClCompile>
     <ClCompile Include="runners\cpu_vel_vao.cpp">

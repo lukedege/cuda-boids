@@ -8,10 +8,10 @@
 
 namespace utils::runners
 {
-	class gpu_vel_based : public ssbo_runner
+	class gpu_angle_ssbo : public ssbo_runner
 	{
 	public:
-		gpu_vel_based(const size_t amount);
+		gpu_angle_ssbo(const size_t amount);
 
 		void calculate(const float delta_time);
 
@@ -21,15 +21,13 @@ namespace utils::runners
 		utils::graphics::opengl::Shader shader;
 
 		size_t amount;
-		utils::graphics::opengl::Mesh triangle_mesh;
-		std::vector<glm::vec4> positions;
-		std::vector<glm::vec4> velocities;
+		utils::graphics::opengl::Flock triangles;
 
 		size_t block_size;
 		size_t grid_size;
 
 		utils::cuda::gl_manager cuda_gl_manager;
-		float4* ssbo_positions_dptr;
-		float4* ssbo_velocities_dptr;
+		float2* ssbo_positions_dptr;
+		float* ssbo_angles_dptr;
 	};
 }

@@ -70,6 +70,8 @@
       <CudaRuntime>Shared</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalOptions>-std=c++17 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Od</Optimization>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -94,20 +96,21 @@
       <CudaRuntime>Shared</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalOptions>-std=c++17 %(AdditionalOptions)</AdditionalOptions>
+      <FastMath>true</FastMath>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="old_main.cpp" />
     <CudaCompile Include="old_main2.cpp" />
-    <CudaCompile Include="runners\gpu_angle_based.cpp" />
+    <CudaCompile Include="runners\gpu_angle_ssbo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="runners\boid_runner.h" />
-    <ClInclude Include="runners\cpu_angle_based.h" />
-    <ClInclude Include="runners\cpu_vel_based.h" />
+    <ClInclude Include="runners\cpu_angle_ssbo.h" />
+    <ClInclude Include="runners\cpu_vel_ssbo.h" />
     <ClInclude Include="runners\cpu_vel_vao.h" />
-    <ClInclude Include="runners\gpu_angle_based.h" />
-    <ClInclude Include="runners\gpu_vel_based.h" />
+    <ClInclude Include="runners\gpu_angle_ssbo.h" />
+    <ClInclude Include="runners\gpu_vel_ssbo.h" />
     <ClInclude Include="runners\gpu_vel_vao.h" />
     <ClInclude Include="runners\ssbo_runner.h" />
     <ClInclude Include="runners\vao_runner.h" />
@@ -126,11 +129,11 @@
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="quick_tests.cpp" />
-    <ClCompile Include="runners\cpu_angle_based.cpp" />
-    <ClCompile Include="runners\cpu_vel_based.cpp" />
+    <ClCompile Include="runners\cpu_angle_ssbo.cpp" />
+    <ClCompile Include="runners\cpu_vel_ssbo.cpp" />
     <ClCompile Include="runners\cpu_vel_vao.cpp" />
     <CudaCompile Include="runners\gpu_vel_vao.cpp" />
-    <CudaCompile Include="runners\gpu_vel_based.cpp" />
+    <CudaCompile Include="runners\gpu_vel_ssbo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.frag" />

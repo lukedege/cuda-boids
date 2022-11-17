@@ -21,24 +21,26 @@ uniform mat4 projection_matrix;
 
 out gl_PerVertex { vec4 gl_Position; };
 
-mat4 calculate_instance_rotation_matrix()
+mat4 rotation_towards(vec3 vel)
 {
-	vec3 vel_norm = normalize(velocities[gl_InstanceID].xyz);
-	vec3 ref      = { 1, 0, 0 };
-	float angle = (PI/2) - acos(clamp(dot(vel_norm, ref), -1.f, 1.f));
-	mat4 ret = {
-		vec4( cos(angle), -sin(angle), 0.0,  0.0 ),
-		vec4( sin(angle), cos(angle),  0.0,  0.0 ),
-		vec4( 0.0,        0.0,         1.0,  0.0 ),
-		vec4( 0.0,        0.0,         0.0,  1.0 ) };
-	return ret;
+	vec3 up = { 0, 1, 0 };
+	vec3 vel_norm = normalize(vel);
+	vec3 k = cross(vel_norm, up); //k is the rotation axis
+	float c = dot(vel_norm, up);
+	float s = length(k);
+	
+	mat4 rot = {
+		vec4(k.x*k.x*(1-c) + c    , k.x*k.y*(1-c) - k.z*s, k.x*k.z*(1-c) + k.y*s, 0),
+		vec4(k.y*k.x*(1-c) + k.z*s, k.y*k.y*(1-c) + c    , k.y*k.z*(1-c) - k.x*s, 0),
+		vec4(k.z*k.x*(1-c) - k.y*s, k.z*k.y*(1-c) + k.x*s, k.z*k.z*(1-c) + c    , 0),
+		vec4(0, 0, 0, 1) };
+	return rot;
 }
 
 void main()
 {
-	mat4 instance_rotation = calculate_instance_rotation_matrix();
-	mat4 instance_matrix   = mat4(1);
-	vec4 instance_position = ((instance_rotation * instance_matrix) * vec4(position, 1)) + vec4(positions[gl_InstanceID].xyz, 0);
-
+	mat4 instance_rotation = rotation_towards(velocities[gl_InstanceID].xyz);
+	vec4 instance_position = instance_rotation * vec4(position, 1) + vec4(positions[gl_InstanceID].xyz, 0);
+	
 	gl_Position = projection_matrix * view_matrix * instance_position;
 }
