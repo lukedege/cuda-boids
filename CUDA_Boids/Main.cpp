@@ -47,7 +47,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos);
 void process_camera_input(ugo::Camera& cam, GLfloat delta_time);
 
-GLfloat last_x, last_y, x_offset, y_offset;
+GLfloat mouse_last_x, mouse_last_y, x_offset, y_offset;
 bool first_mouse = true;
 
 bool keys[1024];
@@ -81,7 +81,7 @@ int main()
 	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	
 	// Runner setup
-	size_t amount = 1024;
+	size_t amount = 50;
 	utils::runners::cpu_vel_ssbo spec_runner{ amount };
 	utils::runners::boid_runner* runner = &spec_runner;
 	
@@ -163,14 +163,14 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
 {
 	if (first_mouse)
 	{
-		last_x = x_pos;
-		last_y = y_pos;
+		mouse_last_x = x_pos;
+		mouse_last_y = y_pos;
 		first_mouse = false;
 	}
 
-	x_offset = x_pos - last_x;
-	y_offset = last_y - y_pos;
+	x_offset = x_pos - mouse_last_x;
+	y_offset = mouse_last_y - y_pos;
 
-	last_x = x_pos;
-	last_y = y_pos;
+	mouse_last_x = x_pos;
+	mouse_last_y = y_pos;
 }

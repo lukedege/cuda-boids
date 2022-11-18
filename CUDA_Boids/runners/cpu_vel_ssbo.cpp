@@ -22,10 +22,40 @@ namespace utils::runners
 		for (size_t i = 0; i < amount; i++)
 		{
 			// conditions as multipliers (avoids divergence)
-			float in_radius = glm::distance2(positions[i], velocities[i]) < max_radius * max_radius;
+			float in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
 			alignment += velocities[i] * in_radius;
 		}
-		return normalize(alignment);
+
+		return utils::math::normalize(alignment);
+	}
+
+	glm::vec4 cohesion(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount, size_t max_radius)
+	{
+		glm::vec4 cohesion{ 0 };
+		float counter{ 0 };
+		for (size_t i = 0; i < amount; i++)
+		{
+			// conditions as multipliers (avoids divergence)
+			float in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
+			cohesion += positions[i] * in_radius;
+			counter  += 1.f * in_radius;
+		}
+		cohesion /= (float)counter;
+		cohesion -= positions[current];
+		return utils::math::normalize(cohesion);
+	}
+
+	glm::vec4 separation(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount)
+	{
+		glm::vec4 separation{ 0 };
+		glm::vec4 repulsion;
+		for (size_t i = 0; i < amount; i++)
+		{
+			repulsion = positions[current] - positions[i];
+			separation += utils::math::normalize(repulsion) / (glm::length(repulsion) + 0.0001f);
+		}
+
+		return utils::math::normalize(separation);
 	}
 
 	cpu_vel_ssbo::cpu_vel_ssbo(const size_t amount) :
@@ -35,7 +65,7 @@ namespace utils::runners
 		positions { std::vector<glm::vec4>(amount) },
 		velocities{ std::vector<glm::vec4>(amount) }
 	{
-		utils::containers::random_vec4_fill_cpu(positions, -20, 20);
+		utils::containers::random_vec4_fill_cpu(positions, -10, 10);
 		utils::containers::random_vec4_fill_cpu(velocities, -1, 1);
 
 		setup_ssbo(ssbo_positions , sizeof(glm::vec4), amount, 0, positions.data());
@@ -44,11 +74,14 @@ namespace utils::runners
 
 	void cpu_vel_ssbo::calculate(const float delta_time)
 	{
-		using namespace glm;
-		vec4 vel{-1,1,-1,0 };
+		glm::vec4 accel_blend;
 		for (size_t i = 0; i < amount; i++)
 		{
-			velocities[i] = vel * delta_time;//alignment(i, positions.data(), velocities.data(), amount, 50) * delta_time;
+			accel_blend =  0.8f * alignment (i, positions.data(), velocities.data(), amount, 10)
+				         + 0.5f * cohesion  (i, positions.data(), velocities.data(), amount, 10)
+				         + 0.5f * separation(i, positions.data(), velocities.data(), amount    ); 
+			//TODO proper velocity steering, such as: velocities[i] = (velocities[i] * t + 0.5f * normalize(blend) * t * t) * 10.f; 
+			velocities[i] = velocities[i] * delta_time + normalize(accel_blend) * delta_time;
 			positions [i] += velocities[i];
 		}
 
