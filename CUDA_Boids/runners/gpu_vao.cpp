@@ -1,4 +1,4 @@
-#include "gpu_vel_vao.h"
+#include "gpu_vao.h"
 
 // std libraries
 #include <vector>

@@ -1,4 +1,4 @@
-#include "cpu_vel_vao.h"
+#include "cpu_vao.h"
 
 // std libraries
 #include <vector>

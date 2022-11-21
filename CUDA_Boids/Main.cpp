@@ -32,12 +32,10 @@
 #include "utils/flock.h"
 #include "utils/camera.h"
 
-#include "runners/gpu_angle_ssbo.h"
-#include "runners/gpu_vel_ssbo.h"
-#include "runners/cpu_angle_ssbo.h"
-#include "runners/cpu_vel_ssbo.h"
-#include "runners/cpu_vel_vao.h"
-#include "runners/gpu_vel_vao.h"
+#include "runners/gpu_ssbo.h"
+#include "runners/cpu_ssbo.h"
+#include "runners/cpu_vao.h"
+#include "runners/gpu_vao.h"
 
 namespace chk = utils::cuda::checks;
 namespace ugo = utils::graphics::opengl;
@@ -81,9 +79,21 @@ int main()
 	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	
 	// Runner setup
-	size_t amount = 50;
-	utils::runners::cpu_vel_ssbo spec_runner{ amount };
-	utils::runners::boid_runner* runner = &spec_runner;
+	utils::runners::boid_runner::simulation_parameters params
+	{
+		{ 1 },//boid_amount     
+		{ 5.0f },//boid_speed      
+		{ 10.f },//boid_fov        
+		{ 1.0f },//alignment_coeff 
+		{ 0.8f },//cohesion_coeff  
+		{ 0.8f },//separation_coeff
+		{ 40.f },//cube_size       
+	};
+	utils::runners::boid_runner* runner;
+	runner->simulation_params = params;
+
+	utils::runners::cpu_vel_ssbo spec_runner;
+	runner = &spec_runner;
 	
 	// Camera setup
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_FALSE };

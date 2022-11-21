@@ -15,6 +15,12 @@ namespace utils
 
 	namespace math
 	{
+		struct plane
+		{
+			glm::vec4 origin;
+			glm::vec4 normal;
+		};
+
 		inline glm::vec4 normalize(glm::vec4 vec)
 		{
 			glm::vec4 zero{ 0 };
@@ -22,6 +28,11 @@ namespace utils
 				return glm::normalize(vec);
 			else
 				return zero;
+		}
+
+		inline float distance_point_plane(glm::vec4 point, plane plane)
+		{
+			return glm::dot(plane.normal, point - plane.origin);
 		}
 	}	
 

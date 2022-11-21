@@ -10,7 +10,7 @@ namespace utils::runners
 	class cpu_vel_ssbo : public ssbo_runner
 	{
 	public:
-		cpu_vel_ssbo(const size_t amount);
+		cpu_vel_ssbo();
 
 		void calculate(const float delta_time);
 

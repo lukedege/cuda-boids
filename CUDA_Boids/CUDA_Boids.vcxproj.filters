@@ -90,22 +90,16 @@
     <ClInclude Include="runners\vao_runner.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\gpu_vel_ssbo.h">
+    <ClInclude Include="runners\gpu_ssbo.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\cpu_angle_ssbo.h">
+    <ClInclude Include="runners\cpu_ssbo.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\cpu_vel_ssbo.h">
-      <Filter>Headers\runners\ssbo_runners</Filter>
-    </ClInclude>
-    <ClInclude Include="runners\gpu_angle_ssbo.h">
-      <Filter>Headers\runners\ssbo_runners</Filter>
-    </ClInclude>
-    <ClInclude Include="runners\cpu_vel_vao.h">
+    <ClInclude Include="runners\cpu_vao.h">
       <Filter>Headers\runners\vao_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\gpu_vel_vao.h">
+    <ClInclude Include="runners\gpu_vao.h">
       <Filter>Headers\runners\vao_runners</Filter>
     </ClInclude>
   </ItemGroup>
@@ -116,13 +110,10 @@
     <CudaCompile Include="old_main.cpp">
       <Filter>Sources\old</Filter>
     </CudaCompile>
-    <CudaCompile Include="runners\gpu_angle_ssbo.cpp">
+    <CudaCompile Include="runners\gpu_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
-    <CudaCompile Include="runners\gpu_vel_ssbo.cpp">
-      <Filter>Sources\Runners\ssbo_runners</Filter>
-    </CudaCompile>
-    <CudaCompile Include="runners\gpu_vel_vao.cpp">
+    <CudaCompile Include="runners\gpu_vao.cpp">
       <Filter>Sources\Runners\vao_runners</Filter>
     </CudaCompile>
   </ItemGroup>
@@ -136,27 +127,15 @@
     <ClCompile Include="Main.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="runners\cpu_angle_ssbo.cpp">
+    <ClCompile Include="runners\cpu_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </ClCompile>
-    <ClCompile Include="runners\cpu_vel_ssbo.cpp">
-      <Filter>Sources\Runners\ssbo_runners</Filter>
-    </ClCompile>
-    <ClCompile Include="runners\cpu_vel_vao.cpp">
+    <ClCompile Include="runners\cpu_vao.cpp">
       <Filter>Sources\Runners\vao_runners</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\mvp.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\mvp_instanced.vert">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="shaders\ssbo_instanced_vel.vert">
-      <Filter>Shaders\ssbo</Filter>
-    </None>
-    <None Include="shaders\ssbo_instanced_angle.vert">
+    <None Include="shaders\ssbo.vert">
       <Filter>Shaders\ssbo</Filter>
     </None>
     <None Include="shaders\basic.vert">

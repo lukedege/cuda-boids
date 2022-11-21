@@ -5,9 +5,11 @@
 #include "utils/mesh.h"
 #include "utils/camera.h"
 
+#include "utils/utils.h"
+
 namespace ugo = utils::graphics::opengl;
 
-int mainz()
+void opengl_main()
 {
 	ugo::window wdw
 	{
@@ -65,18 +67,18 @@ int mainz()
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (GLvoid*)0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0); 
-	glBindVertexArray(0); 
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 
 
-	utils::graphics::opengl::Shader shader{ "shaders/vao.vert", "shaders/basic.frag", "shaders/vao.geom"};
-	
+	utils::graphics::opengl::Shader shader{ "shaders/vao.vert", "shaders/basic.frag", "shaders/vao.geom" };
+
 	shader.use();
 
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
 	glm::mat4 projection_matrix = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
-	
+
 	while (wdw.is_open())
 	{
 		// we "clear" the frame and z buffer
@@ -85,7 +87,7 @@ int mainz()
 
 		for (int i = 0; i < positions.size(); i++)
 		{
-			positions[i] += velocities[i]*0.0001f;
+			positions[i] += velocities[i] * 0.0001f;
 		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
@@ -107,5 +109,26 @@ int mainz()
 		glfwSwapBuffers(glfw_window);
 		glfwPollEvents();
 	}
+}
+
+int mainz()
+{
+	float cube_size = 10;
+	glm::vec4 boid = { -1,3,9,0 };
+	utils::math::plane zp{ { 0,0, cube_size,0 }, { 0,0,-1,0 } };
+	utils::math::plane zm{ { 0,0,-cube_size,0 }, { 0,0, 1,0 } };
+	utils::math::plane xp{ {  cube_size,0,0,0 }, { -1,0,0,0 } };
+	utils::math::plane xm{ { -cube_size,0,0,0 }, {  1,0,0,0 } };
+	utils::math::plane yp{ { 0, cube_size,0,0 }, { 0,-1,0,0 } };
+	utils::math::plane ym{ { 0,-cube_size,0,0 }, { 0, 1,0,0 } };
+	std::vector<utils::math::plane> planes{zp,zm,xp,xm,yp,ym};
+	for (auto& p : planes)
+	{
+		float dist = utils::math::distance_point_plane(boid, p);
+		std::cout << dist << " - ";
+		std::cout << 1 / dist;
+		std::cout << std::endl;
+	}
+	
 	return 0;
 }

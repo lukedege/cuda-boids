@@ -1,4 +1,4 @@
-#include "gpu_vel_ssbo.h"
+#include "gpu_ssbo.h"
 
 // std libraries
 #include <iostream>
@@ -38,7 +38,7 @@ namespace
 namespace utils::runners
 {
 	gpu_vel_ssbo::gpu_vel_ssbo(const size_t amount) :
-		shader{ "shaders/ssbo_instanced_vel.vert", "shaders/basic.frag"},
+		shader{ "shaders/ssbo.vert", "shaders/basic.frag"},
 		amount{ amount },
 		triangle_mesh{setup_mesh()},
 		positions { std::vector<glm::vec4>(amount) },

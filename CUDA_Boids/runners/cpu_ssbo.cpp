@@ -1,4 +1,4 @@
-#include "cpu_vel_ssbo.h"
+#include "cpu_ssbo.h"
 
 // std libraries
 #include <vector>
@@ -29,7 +29,7 @@ namespace utils::runners
 		return utils::math::normalize(alignment);
 	}
 
-	glm::vec4 cohesion(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount, size_t max_radius)
+	glm::vec4 cohesion(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
 	{
 		glm::vec4 cohesion{ 0 };
 		float counter{ 0 };
@@ -45,22 +45,29 @@ namespace utils::runners
 		return utils::math::normalize(cohesion);
 	}
 
-	glm::vec4 separation(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount)
+	glm::vec4 separation(size_t current, glm::vec4* positions, utils::math::plane* borders, size_t amount)
 	{
 		glm::vec4 separation{ 0 };
 		glm::vec4 repulsion;
+		// boid check
 		for (size_t i = 0; i < amount; i++)
 		{
 			repulsion = positions[current] - positions[i];
 			separation += utils::math::normalize(repulsion) / (glm::length(repulsion) + 0.0001f);
+
+			for (size_t b = 0; b < 6; b++)
+			{
+				separation += borders[b].normal / abs(utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f);
+			}
 		}
 
 		return utils::math::normalize(separation);
 	}
 
-	cpu_vel_ssbo::cpu_vel_ssbo(const size_t amount) :
-		shader{ "shaders/ssbo_instanced_vel.vert", "shaders/basic.frag"},
-		amount{ amount },
+
+	cpu_vel_ssbo::cpu_vel_ssbo() :
+		shader{ "shaders/ssbo.vert", "shaders/basic.frag"},
+		amount{ simulation_params.boid_amount },
 		triangle_mesh{ setup_mesh() },
 		positions { std::vector<glm::vec4>(amount) },
 		velocities{ std::vector<glm::vec4>(amount) }
@@ -77,12 +84,12 @@ namespace utils::runners
 		glm::vec4 accel_blend;
 		for (size_t i = 0; i < amount; i++)
 		{
-			accel_blend =  0.8f * alignment (i, positions.data(), velocities.data(), amount, 10)
-				         + 0.5f * cohesion  (i, positions.data(), velocities.data(), amount, 10)
-				         + 0.5f * separation(i, positions.data(), velocities.data(), amount    ); 
-			//TODO proper velocity steering, such as: velocities[i] = (velocities[i] * t + 0.5f * normalize(blend) * t * t) * 10.f; 
-			velocities[i] = velocities[i] * delta_time + normalize(accel_blend) * delta_time;
-			positions [i] += velocities[i];
+			accel_blend =  simulation_params.alignment_coeff  * alignment (i, positions.data(), velocities.data(), amount, simulation_params.boid_fov)
+				         + simulation_params.cohesion_coeff   * cohesion  (i, positions.data(), amount, simulation_params.boid_fov)
+				         + simulation_params.separation_coeff * separation(i, positions.data(), planes_array, amount);
+
+			velocities[i] = velocities[i] + normalize(accel_blend) * delta_time; //v = u + at
+			positions [i] += normalize(velocities[i]) * simulation_params.boid_speed * delta_time; //s = vt
 		}
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_positions);

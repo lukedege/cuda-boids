@@ -102,16 +102,13 @@
   <ItemGroup>
     <CudaCompile Include="old_main.cpp" />
     <CudaCompile Include="old_main2.cpp" />
-    <CudaCompile Include="runners\gpu_angle_ssbo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="runners\boid_runner.h" />
-    <ClInclude Include="runners\cpu_angle_ssbo.h" />
-    <ClInclude Include="runners\cpu_vel_ssbo.h" />
-    <ClInclude Include="runners\cpu_vel_vao.h" />
-    <ClInclude Include="runners\gpu_angle_ssbo.h" />
-    <ClInclude Include="runners\gpu_vel_ssbo.h" />
-    <ClInclude Include="runners\gpu_vel_vao.h" />
+    <ClInclude Include="runners\cpu_ssbo.h" />
+    <ClInclude Include="runners\cpu_vao.h" />
+    <ClInclude Include="runners\gpu_ssbo.h" />
+    <ClInclude Include="runners\gpu_vao.h" />
     <ClInclude Include="runners\ssbo_runner.h" />
     <ClInclude Include="runners\vao_runner.h" />
     <ClInclude Include="utils\camera.h" />
@@ -129,20 +126,16 @@
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="quick_tests.cpp" />
-    <ClCompile Include="runners\cpu_angle_ssbo.cpp" />
-    <ClCompile Include="runners\cpu_vel_ssbo.cpp" />
-    <ClCompile Include="runners\cpu_vel_vao.cpp" />
-    <CudaCompile Include="runners\gpu_vel_vao.cpp" />
-    <CudaCompile Include="runners\gpu_vel_ssbo.cpp" />
+    <ClCompile Include="runners\cpu_ssbo.cpp" />
+    <ClCompile Include="runners\cpu_vao.cpp" />
+    <CudaCompile Include="runners\gpu_vao.cpp" />
+    <CudaCompile Include="runners\gpu_ssbo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.geom" />
     <None Include="shaders\basic.vert" />
-    <None Include="shaders\ssbo_instanced_angle.vert" />
-    <None Include="shaders\mvp.vert" />
-    <None Include="shaders\mvp_instanced.vert" />
-    <None Include="shaders\ssbo_instanced_vel.vert" />
+    <None Include="shaders\ssbo.vert" />
     <None Include="shaders\vao.geom" />
     <None Include="shaders\vao.vert" />
   </ItemGroup>
