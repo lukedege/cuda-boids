@@ -104,6 +104,7 @@
     <CudaCompile Include="old_main2.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="runners\boid_behaviours.h" />
     <ClInclude Include="runners\boid_runner.h" />
     <ClInclude Include="runners\cpu_ssbo.h" />
     <ClInclude Include="runners\cpu_vao.h" />

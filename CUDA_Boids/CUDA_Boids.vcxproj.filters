@@ -102,6 +102,9 @@
     <ClInclude Include="runners\gpu_vao.h">
       <Filter>Headers\runners\vao_runners</Filter>
     </ClInclude>
+    <ClInclude Include="runners\boid_behaviours.h">
+      <Filter>Headers\runners</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="old_main2.cpp">

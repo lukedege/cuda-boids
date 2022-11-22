@@ -4,67 +4,14 @@
 #include <vector>
 #include <math.h>
 
-#include <glad.h>
 #include <glm/glm.hpp>
-#include <glm/gtx/vector_angle.hpp> 
-#include <glm/gtx/norm.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 // utils libraries
 #include "../utils/utils.h"
+#include "boid_behaviours.h"
 
 namespace utils::runners
 {
-	//TODO move behaviours into a common boid behaviour class (for both cpu/gpu)
-	glm::vec4 alignment(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount, size_t max_radius)
-	{
-		glm::vec4 alignment{0};
-		for (size_t i = 0; i < amount; i++)
-		{
-			// conditions as multipliers (avoids divergence)
-			float in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			alignment += velocities[i] * in_radius;
-		}
-
-		return utils::math::normalize(alignment);
-	}
-
-	glm::vec4 cohesion(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
-	{
-		glm::vec4 cohesion{ 0 };
-		float counter{ 0 };
-		for (size_t i = 0; i < amount; i++)
-		{
-			// conditions as multipliers (avoids divergence)
-			float in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			cohesion += positions[i] * in_radius;
-			counter  += 1.f * in_radius;
-		}
-		cohesion /= (float)counter;
-		cohesion -= positions[current];
-		return utils::math::normalize(cohesion);
-	}
-
-	glm::vec4 separation(size_t current, glm::vec4* positions, utils::math::plane* borders, size_t amount)
-	{
-		glm::vec4 separation{ 0 };
-		glm::vec4 repulsion;
-		// boid check
-		for (size_t i = 0; i < amount; i++)
-		{
-			repulsion = positions[current] - positions[i];
-			separation += utils::math::normalize(repulsion) / (glm::length(repulsion) + 0.0001f);
-
-			for (size_t b = 0; b < 6; b++)
-			{
-				separation += borders[b].normal / abs(utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f);
-			}
-		}
-
-		return utils::math::normalize(separation);
-	}
-
-
 	cpu_vel_ssbo::cpu_vel_ssbo() :
 		shader{ "shaders/ssbo.vert", "shaders/basic.frag"},
 		amount{ simulation_params.boid_amount },
@@ -84,12 +31,14 @@ namespace utils::runners
 		glm::vec4 accel_blend;
 		for (size_t i = 0; i < amount; i++)
 		{
-			accel_blend =  simulation_params.alignment_coeff  * alignment (i, positions.data(), velocities.data(), amount, simulation_params.boid_fov)
-				         + simulation_params.cohesion_coeff   * cohesion  (i, positions.data(), amount, simulation_params.boid_fov)
-				         + simulation_params.separation_coeff * separation(i, positions.data(), planes_array, amount);
+			accel_blend =  simulation_params.alignment_coeff       * behaviours::cpu::naive::alignment      (i, positions.data(), velocities.data(), amount, simulation_params.boid_fov)
+				         + simulation_params.cohesion_coeff        * behaviours::cpu::naive::cohesion       (i, positions.data(), amount, simulation_params.boid_fov)
+				         + simulation_params.separation_coeff      * behaviours::cpu::naive::separation     (i, positions.data(), amount)
+				         + simulation_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), planes_array, amount);
 
-			velocities[i] = velocities[i] + normalize(accel_blend) * delta_time; //v = u + at
-			positions [i] += normalize(velocities[i]) * simulation_params.boid_speed * delta_time; //s = vt
+			//velocities[i] = normalize(velocities[i]) + normalize(accel_blend) * delta_time; //v = u + at
+			velocities[i] = normalize(velocities[i] + accel_blend * delta_time); //v = u + at
+			positions [i] += velocities[i] * simulation_params.boid_speed * delta_time; //s = vt
 		}
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_positions);

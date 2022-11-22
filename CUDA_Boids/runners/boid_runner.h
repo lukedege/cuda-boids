@@ -12,13 +12,14 @@ namespace utils::runners
 	public:
 		inline static struct simulation_parameters
 		{
-			size_t boid_amount     { 1024 };
-			float  boid_speed      { 3.0f };
-			float  boid_fov        { 10.f };
-			float  alignment_coeff { 1.0f };
-			float  cohesion_coeff  { 0.8f };
-			float  separation_coeff{ 0.8f };
-			float  cube_size       { 5.0f };
+			size_t boid_amount           { 1024 };
+			float  boid_speed            { 3.0f };
+			float  boid_fov              { 10.f };
+			float  alignment_coeff       { 1.0f };
+			float  cohesion_coeff        { 0.8f };
+			float  separation_coeff      { 1.0f };
+			float  wall_separation_coeff { 3.0f };
+			float  cube_size             { 50.f };
 		} simulation_params; 
 
 		virtual void calculate(const float delta_time) = 0;

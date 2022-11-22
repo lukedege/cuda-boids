@@ -1,13 +1,10 @@
 #include "gpu_ssbo.h"
 
 // std libraries
-#include <iostream>
 #include <vector>
 #include <math.h>
 
-#include <glad.h>
 #include <glm/glm.hpp>
-#include <glm/gtx/vector_angle.hpp> 
 
 // CUDA libraries
 #include <cuda_runtime.h>

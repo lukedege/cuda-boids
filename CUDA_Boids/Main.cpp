@@ -73,21 +73,22 @@ int main()
 
 	// setup callbacks
 	glfwSetKeyCallback(glfw_window, key_callback);
-	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+	//glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 
 	// we disable the mouse cursor
-	glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 1 },//boid_amount     
-		{ 5.0f },//boid_speed      
-		{ 10.f },//boid_fov        
-		{ 1.0f },//alignment_coeff 
-		{ 0.8f },//cohesion_coeff  
-		{ 0.8f },//separation_coeff
-		{ 40.f },//cube_size       
+		{ 50   },//boid_amount
+		{ 5.0f },//boid_speed
+		{ 5.f  },//boid_fov
+		{ 1.0f },//alignment_coeff
+		{ 0.8f },//cohesion_coeff
+		{ 1.0f },//separation_coeff
+		{ 3.0f },//wall_separation_coeff
+		{ 10.f },//cube_size
 	};
 	utils::runners::boid_runner* runner;
 	runner->simulation_params = params;
