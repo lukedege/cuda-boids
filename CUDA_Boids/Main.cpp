@@ -91,9 +91,9 @@ int main()
 		{ 10.f },//cube_size
 	};
 	utils::runners::boid_runner* runner;
-	runner->simulation_params = params;
 
 	utils::runners::cpu_vel_ssbo spec_runner;
+	spec_runner.set_simulation_parameters(params);
 	runner = &spec_runner;
 	
 	// Camera setup

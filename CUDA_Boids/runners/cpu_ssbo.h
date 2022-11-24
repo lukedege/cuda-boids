@@ -16,6 +16,9 @@ namespace utils::runners
 
 		void draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix);
 
+		simulation_parameters get_simulation_parameters();
+		void set_simulation_parameters(simulation_parameters new_params);
+
 	private:
 		utils::graphics::opengl::Shader shader;
 

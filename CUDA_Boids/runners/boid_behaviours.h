@@ -2,17 +2,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/norm.hpp>
 
+#include "../utils/CUDA/vector_math.h"
+
 namespace utils::runners::behaviours::cpu::naive
 {
+	//TODO check if behaviours are CORRECT
+
 	inline glm::vec4 alignment(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount, size_t max_radius)
 	{
 		glm::vec4 alignment{ 0 };
-		float in_radius;
+		bool in_radius;
 		for (size_t i = 0; i < amount; i++)
 		{
-			// conditions as multipliers (avoids divergence)
 			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			alignment += velocities[i] * in_radius;
+			if(in_radius)
+				alignment += velocities[i];
 		}
 
 		return utils::math::normalize(alignment);
@@ -21,28 +25,36 @@ namespace utils::runners::behaviours::cpu::naive
 	inline glm::vec4 cohesion(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
 	{
 		glm::vec4 cohesion{ 0 };
-		float counter{ 0 }, in_radius;
+		float counter{ 0 };
+		bool in_radius;
 		for (size_t i = 0; i < amount; i++)
 		{
-			// conditions as multipliers (avoids divergence)
-			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			cohesion += positions[i] * in_radius;
-			counter += 1.f * in_radius;
+			in_radius = 1;// glm::distance2(positions[current], positions[i]) < max_radius* max_radius;
+			if (in_radius)
+			{
+				cohesion += positions[i];
+				counter += 1.f;
+			}
 		}
-		cohesion /= (float)counter;
+		cohesion /= counter;
 		cohesion -= positions[current];
 		return utils::math::normalize(cohesion);
 	}
 
-	inline glm::vec4 separation(size_t current, glm::vec4* positions, size_t amount)
+	inline glm::vec4 separation(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
 	{
 		glm::vec4 separation{ 0 };
 		glm::vec4 repulsion;
+		bool in_radius;
 		// boid check
 		for (size_t i = 0; i < amount; i++)
 		{
-			repulsion = positions[current] - positions[i];
-			separation += utils::math::normalize(repulsion) / (glm::length(repulsion) + 0.0001f);
+			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
+			if (in_radius)
+			{
+				repulsion = positions[current] - positions[i]; // TODO sottrazione e distance2 sono ridondanti, ottimizza
+				separation += utils::math::normalize(repulsion) / (glm::length(repulsion) + 0.0001f);
+			}
 		}
 
 		return utils::math::normalize(separation);
@@ -52,7 +64,7 @@ namespace utils::runners::behaviours::cpu::naive
 	{
 		glm::vec4 separation{ 0 };
 		glm::vec4 repulsion;
-		float distance, in_radius;
+		float distance;
 		// wall check
 		for (size_t i = 0; i < amount; i++)
 		{
@@ -71,3 +83,4 @@ namespace utils::runners::behaviours::cpu::naive
 		return utils::math::normalize(separation);
 	}
 }
+

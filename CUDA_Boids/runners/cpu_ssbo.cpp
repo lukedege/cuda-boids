@@ -14,7 +14,7 @@ namespace utils::runners
 {
 	cpu_vel_ssbo::cpu_vel_ssbo() :
 		shader{ "shaders/ssbo.vert", "shaders/basic.frag"},
-		amount{ simulation_params.boid_amount },
+		amount{ sim_params.boid_amount },
 		triangle_mesh{ setup_mesh() },
 		positions { std::vector<glm::vec4>(amount) },
 		velocities{ std::vector<glm::vec4>(amount) }
@@ -31,14 +31,14 @@ namespace utils::runners
 		glm::vec4 accel_blend;
 		for (size_t i = 0; i < amount; i++)
 		{
-			accel_blend =  simulation_params.alignment_coeff       * behaviours::cpu::naive::alignment      (i, positions.data(), velocities.data(), amount, simulation_params.boid_fov)
-				         + simulation_params.cohesion_coeff        * behaviours::cpu::naive::cohesion       (i, positions.data(), amount, simulation_params.boid_fov)
-				         + simulation_params.separation_coeff      * behaviours::cpu::naive::separation     (i, positions.data(), amount)
-				         + simulation_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), planes_array, amount);
+			accel_blend =  sim_params.alignment_coeff       * behaviours::cpu::naive::alignment      (i, positions.data(), velocities.data(), amount, sim_params.boid_fov)
+				         + sim_params.cohesion_coeff        * behaviours::cpu::naive::cohesion       (i, positions.data(), amount, sim_params.boid_fov)
+				         + sim_params.separation_coeff      * behaviours::cpu::naive::separation     (i, positions.data(), amount, sim_params.boid_fov)
+				         + sim_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), simulation_volume_planes, amount);
 
 			//velocities[i] = normalize(velocities[i]) + normalize(accel_blend) * delta_time; //v = u + at
 			velocities[i] = normalize(velocities[i] + accel_blend * delta_time); //v = u + at
-			positions [i] += velocities[i] * simulation_params.boid_speed * delta_time; //s = vt
+			positions [i] += velocities[i] * sim_params.boid_speed * delta_time; //s = vt
 		}
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_positions);
@@ -56,5 +56,15 @@ namespace utils::runners
 		shader.setMat4("view_matrix", view_matrix);
 		shader.setMat4("projection_matrix", projection_matrix);
 		triangle_mesh.draw_instanced(amount);
+	}
+
+	cpu_vel_ssbo::simulation_parameters cpu_vel_ssbo::get_simulation_parameters()
+	{
+		return sim_params;
+	}
+
+	void cpu_vel_ssbo::set_simulation_parameters(cpu_vel_ssbo::simulation_parameters new_params)
+	{
+		sim_params = new_params;
 	}
 }
