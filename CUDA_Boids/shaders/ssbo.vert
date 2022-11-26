@@ -16,8 +16,11 @@ layout (std430, binding = 1) buffer Velocities
 	vec4 velocities[];
 };
 
-uniform mat4 view_matrix;
-uniform mat4 projection_matrix;
+layout (std140, binding = 2) uniform Matrices
+{
+	mat4 view_matrix;
+	mat4 projection_matrix;
+};
 
 out gl_PerVertex { vec4 gl_Position; };
 

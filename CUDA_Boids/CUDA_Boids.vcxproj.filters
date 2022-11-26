@@ -156,5 +156,8 @@
     <None Include="shaders\vao.vert">
       <Filter>Shaders\vao</Filter>
     </None>
+    <None Include="shaders\mvp.vert">
+      <Filter>Shaders\basic</Filter>
+    </None>
   </ItemGroup>
 </Project>

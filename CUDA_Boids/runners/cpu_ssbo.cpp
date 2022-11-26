@@ -4,6 +4,7 @@
 #include <vector>
 #include <math.h>
 
+#include <glad.h>
 #include <glm/glm.hpp>
 
 // utils libraries
@@ -12,7 +13,8 @@
 
 namespace utils::runners
 {
-	cpu_vel_ssbo::cpu_vel_ssbo() :
+	cpu_vel_ssbo::cpu_vel_ssbo(simulation_parameters params) :
+		ssbo_runner{ params },
 		shader{ "shaders/ssbo.vert", "shaders/basic.frag"},
 		amount{ sim_params.boid_amount },
 		triangle_mesh{ setup_mesh() },
@@ -22,8 +24,8 @@ namespace utils::runners
 		utils::containers::random_vec4_fill_cpu(positions, -10, 10);
 		utils::containers::random_vec4_fill_cpu(velocities, -1, 1);
 
-		setup_ssbo(ssbo_positions , sizeof(glm::vec4), amount, 0, positions.data());
-		setup_ssbo(ssbo_velocities, sizeof(glm::vec4), amount, 1, velocities.data());
+		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec4), amount, 0, positions.data());
+		setup_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec4), amount, 1, velocities.data());
 	}
 
 	void cpu_vel_ssbo::calculate(const float delta_time)
@@ -34,27 +36,31 @@ namespace utils::runners
 			accel_blend =  sim_params.alignment_coeff       * behaviours::cpu::naive::alignment      (i, positions.data(), velocities.data(), amount, sim_params.boid_fov)
 				         + sim_params.cohesion_coeff        * behaviours::cpu::naive::cohesion       (i, positions.data(), amount, sim_params.boid_fov)
 				         + sim_params.separation_coeff      * behaviours::cpu::naive::separation     (i, positions.data(), amount, sim_params.boid_fov)
-				         + sim_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), simulation_volume_planes, amount);
+				         + sim_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), simulation_volume_planes.data(), amount);
 
 			//velocities[i] = normalize(velocities[i]) + normalize(accel_blend) * delta_time; //v = u + at
 			velocities[i] = normalize(velocities[i] + accel_blend * delta_time); //v = u + at
 			positions [i] += velocities[i] * sim_params.boid_speed * delta_time; //s = vt
 		}
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_positions);
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec4), positions.data());
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo_velocities);
-		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, amount * sizeof(glm::vec4), velocities.data());
-		
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		update_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::vec4), amount, positions.data());
+		update_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::vec4), amount, velocities.data());
 	}
 
 	void cpu_vel_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
 	{
+		// Update references to view and projection matrices
+		update_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, 0                , sizeof(glm::mat4), 1, (void*) glm::value_ptr(view_matrix)      );
+		update_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), 1, (void*) glm::value_ptr(projection_matrix));
+
+		// Setup and draw debug info (simulation volume, ...)
+		debug_shader.use();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		cube_mesh.draw(GL_LINES);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		// Setup and draw boids
 		shader.use();
-		shader.setMat4("view_matrix", view_matrix);
-		shader.setMat4("projection_matrix", projection_matrix);
 		triangle_mesh.draw_instanced(amount);
 	}
 

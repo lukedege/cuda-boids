@@ -81,20 +81,19 @@ int main()
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 50   },//boid_amount
+		{ 10   },//boid_amount
 		{ 5.0f },//boid_speed
-		{ 5.f  },//boid_fov
+		{ 10.f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
-		{ 1.0f },//separation_coeff
-		{ 3.0f },//wall_separation_coeff
+		{ 0.8f },//separation_coeff
+		{ 10.0f },//wall_separation_coeff
 		{ 10.f },//cube_size
 	};
-	utils::runners::boid_runner* runner;
+	//utils::runners::boid_runner* runner;
 
-	utils::runners::cpu_vel_ssbo spec_runner;
-	spec_runner.set_simulation_parameters(params);
-	runner = &spec_runner;
+	utils::runners::cpu_vel_ssbo runner{params};
+	//runner = &spec_runner;
 	
 	// Camera setup
 	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_FALSE };
@@ -124,12 +123,12 @@ int main()
 
 		before_calculations = glfwGetTime();
 
-		runner->calculate(delta_time);
+		runner.calculate(delta_time);
 
 		after_calculations = glfwGetTime();
 		delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
 
-		runner->draw(view_matrix, projection_matrix);
+		runner.draw(view_matrix, projection_matrix);
 
 		current_fps = (1 / delta_time);
 		//std::cout << "Calcs: " << delta_calculations << "ms | ";

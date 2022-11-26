@@ -10,6 +10,8 @@ namespace utils::runners
 	class vao_runner : public boid_runner
 	{
 	protected:
+		vao_runner(){}
+		vao_runner(simulation_parameters params) : boid_runner{ params } {}
 
 		inline void setup_vbo(GLuint& vbo, size_t element_size, size_t element_amount, int bind_index, void* data)
 		{

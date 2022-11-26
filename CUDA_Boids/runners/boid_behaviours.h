@@ -24,20 +24,20 @@ namespace utils::runners::behaviours::cpu::naive
 
 	inline glm::vec4 cohesion(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
 	{
-		glm::vec4 cohesion{ 0 };
+		glm::vec4 cohesion{ 0 }, baricenter{ 0 };
 		float counter{ 0 };
 		bool in_radius;
 		for (size_t i = 0; i < amount; i++)
 		{
-			in_radius = 1;// glm::distance2(positions[current], positions[i]) < max_radius* max_radius;
+			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
 			if (in_radius)
 			{
-				cohesion += positions[i];
+				baricenter += positions[i];
 				counter += 1.f;
 			}
 		}
-		cohesion /= counter;
-		cohesion -= positions[current];
+		baricenter /= counter;
+		cohesion = baricenter - positions[current];
 		return utils::math::normalize(cohesion);
 	}
 

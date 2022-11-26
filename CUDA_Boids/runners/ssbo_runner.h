@@ -10,6 +10,9 @@ namespace utils::runners
 	class ssbo_runner : public boid_runner
 	{
 	protected:
+		ssbo_runner(){}
+		ssbo_runner(simulation_parameters params) : boid_runner{params}{}
+
 		inline utils::graphics::opengl::Mesh setup_mesh()
 		{
 			std::vector<utils::graphics::opengl::Vertex> vertices
@@ -22,19 +25,5 @@ namespace utils::runners
 			return utils::graphics::opengl::Mesh(vertices, indices);
 		}
 
-		inline void setup_ssbo(GLuint& ssbo, size_t element_size, size_t element_amount, int bind_index, void* data)
-		{
-			glGenBuffers(1, &ssbo);
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-
-			size_t alloc_size = element_size * element_amount;
-			glBufferData(GL_SHADER_STORAGE_BUFFER, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bind_index, ssbo);
-
-			if (data != 0)
-				glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, alloc_size, data);        // fill buffer object with data
-
-			glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-		}
 	};
 }

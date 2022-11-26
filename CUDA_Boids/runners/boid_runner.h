@@ -3,6 +3,8 @@
 #include <array>
 
 #include "../utils/utils.h"
+#include "../utils/shader.h"
+#include "../utils/mesh.h"
 
 namespace utils::runners
 {
@@ -30,19 +32,87 @@ namespace utils::runners
 
 	protected:
 		boid_runner() : 
-			simulation_volume_planes
-			{
-				{{  sim_params.cube_size,0,0,1 }, { -1,0,0,0 }}, //xp
-				{{ -sim_params.cube_size,0,0,1 }, {  1,0,0,0 }}, //xm
-				{{ 0, sim_params.cube_size,0,1 }, { 0,-1,0,0 }}, //yp
-				{{ 0,-sim_params.cube_size,0,1 }, { 0, 1,0,0 }}, //ym
-				{{ 0,0, sim_params.cube_size,1 }, { 0,0,-1,0 }}, //zp
-				{{ 0,0,-sim_params.cube_size,1 }, { 0,0, 1,0 }}, //zm
-			}
+			simulation_volume_planes { reset_volume() },
+			cube_mesh{ reset_cube_mesh() },
+			debug_shader { "shaders/mvp.vert", "shaders/basic.frag" }
 		{}
+
+		boid_runner(simulation_parameters params) :
+			sim_params{ params },
+			simulation_volume_planes{ reset_volume() },
+			cube_mesh{ reset_cube_mesh() },
+			debug_shader{ "shaders/mvp.vert", "shaders/basic.frag" }
+		{
+			setup_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 2, 0);
+		}
+
+		inline std::array<utils::math::plane, 6> reset_volume()
+		{
+			return
+			{
+				utils::math::plane{{  sim_params.cube_size,0,0,1 }, { -1,0,0,0 }}, //xp
+				utils::math::plane{{ -sim_params.cube_size,0,0,1 }, {  1,0,0,0 }}, //xm
+				utils::math::plane{{ 0, sim_params.cube_size,0,1 }, { 0,-1,0,0 }}, //yp
+				utils::math::plane{{ 0,-sim_params.cube_size,0,1 }, { 0, 1,0,0 }}, //ym
+				utils::math::plane{{ 0,0, sim_params.cube_size,1 }, { 0,0,-1,0 }}, //zp
+				utils::math::plane{{ 0,0,-sim_params.cube_size,1 }, { 0,0, 1,0 }}, //zm
+			};
+		}
+		
+		inline utils::graphics::opengl::Mesh reset_cube_mesh()
+		{
+			float val = sim_params.cube_size;
+			std::vector<utils::graphics::opengl::Vertex> vertices
+			{
+				{{ -val,  val, -val, }},//0 up   front sx
+				{{  val,  val, -val, }},//1 up   front dx
+				{{  val, -val, -val, }},//2 down front dx
+				{{ -val, -val, -val, }},//3 down front sx
+				{{ -val,  val,  val, }},//4 up   back  sx
+				{{  val,  val,  val, }},//5 up   back  dx
+				{{  val, -val,  val, }},//6 down back  dx
+				{{ -val, -val,  val, }},//7 down back  sx
+			};
+			std::vector<GLuint>  indices
+			{
+				// front face
+				0, 1, 1, 2, 2, 3, 3, 0,
+				// back face
+				4, 5, 5, 6, 6, 7, 7, 4,
+				// links
+				0, 4, 1, 5, 2, 6, 3, 7
+			};
+			return { vertices, indices };
+		}
+
+		inline void setup_buffer_object(GLuint& buffer_object, GLenum target, size_t element_size, size_t element_amount, int bind_index, void* data)
+		{
+			glGenBuffers(1, &buffer_object);
+			glBindBuffer(target, buffer_object);
+
+			size_t alloc_size = element_size * element_amount;
+			glBufferData(target, alloc_size, NULL, GL_DYNAMIC_DRAW); // allocate alloc_size bytes of memory
+			glBindBufferBase(target, bind_index, buffer_object);
+
+			if (data != 0)
+				glBufferSubData(target, 0, alloc_size, data);        // fill buffer object with data
+
+			glBindBuffer(target, 0);
+		}
+
+		inline void update_buffer_object(GLuint& buffer_object, GLenum target, size_t offset, size_t element_size, size_t element_amount, void* data)
+		{
+			glBindBuffer(target, buffer_object);
+			glBufferSubData(target, offset, element_amount * element_size, data);
+			glBindBuffer(target, 0);
+		}
 
 		simulation_parameters sim_params;
 
-		utils::math::plane simulation_volume_planes[6];
+		std::array<utils::math::plane,6> simulation_volume_planes;
+		utils::graphics::opengl::Mesh cube_mesh;
+		utils::graphics::opengl::Shader debug_shader;
+
+		GLuint ubo_matrices; // for camera's projection and view matrices
 	};
 }

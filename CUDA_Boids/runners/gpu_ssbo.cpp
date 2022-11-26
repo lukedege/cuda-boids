@@ -61,11 +61,12 @@ namespace utils::runners
 		GLuint ssbo_velocities;
 
 		utils::containers::random_vec4_fill_cpu(positions, -20, 20);
+		utils::containers::random_vec4_fill_cpu(velocities, -1, 1);
 
-		setup_ssbo(ssbo_positions , sizeof(float4), amount, 0, positions.data());
-		setup_ssbo(ssbo_velocities, sizeof(float4), amount, 1, 0);
+		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 0, positions.data());
+		setup_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 1, velocities.data());
 
-		ssbo_positions_dptr  = (float4*)cuda_gl_manager.add_resource(ssbo_positions, cudaGraphicsMapFlagsNone);
+		ssbo_positions_dptr  = (float4*)cuda_gl_manager.add_resource(ssbo_positions , cudaGraphicsMapFlagsNone);
 		ssbo_velocities_dptr = (float4*)cuda_gl_manager.add_resource(ssbo_velocities, cudaGraphicsMapFlagsNone);
 
 		//cudaMalloc is sufficient since no transfers between CPU-GPU (no cudaMemcpy)
@@ -80,7 +81,7 @@ namespace utils::runners
 		alignment       CUDA_KERNEL(grid_size, block_size)(alignments_dptr      ,ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.boid_fov/*TODO to put in device first*/);
 		cohesion        CUDA_KERNEL(grid_size, block_size)(cohesions_dptr       ,ssbo_positions_dptr, amount, sim_params.boid_fov/*TODO to put in device first*/);
 		separation      CUDA_KERNEL(grid_size, block_size)(separations_dptr     ,ssbo_positions_dptr, amount, sim_params.boid_fov/*TODO to put in device first*/);
-		wall_separation CUDA_KERNEL(grid_size, block_size)(wall_separations_dptr,ssbo_positions_dptr, simulation_volume_planes/*TODO to put in device first*/, amount);
+		wall_separation CUDA_KERNEL(grid_size, block_size)(wall_separations_dptr,ssbo_positions_dptr, simulation_volume_planes.data()/*TODO to put in device first*/, amount);
 		cudaDeviceSynchronize();
 		//blend em
 		blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params/*TODO to put in device first*/, amount, delta_time);

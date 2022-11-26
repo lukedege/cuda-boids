@@ -63,17 +63,17 @@ namespace utils::graphics::opengl
 			freeGPU();
 		}
 
-		void draw() const
+		void draw(GLenum mode = GL_TRIANGLES) const
 		{
 			glBindVertexArray(VAO);
-			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+			glDrawElements(mode, indices.size(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 		}
 
-		void draw_instanced(int amount)
+		void draw_instanced(int amount, GLenum mode = GL_TRIANGLES)
 		{
 			glBindVertexArray(VAO);
-			glDrawElementsInstanced(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0, amount);
+			glDrawElementsInstanced(mode, indices.size(), GL_UNSIGNED_INT, 0, amount);
 			glBindVertexArray(0);
 		}
 

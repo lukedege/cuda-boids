@@ -136,6 +136,7 @@
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.geom" />
     <None Include="shaders\basic.vert" />
+    <None Include="shaders\mvp.vert" />
     <None Include="shaders\ssbo.vert" />
     <None Include="shaders\vao.geom" />
     <None Include="shaders\vao.vert" />
