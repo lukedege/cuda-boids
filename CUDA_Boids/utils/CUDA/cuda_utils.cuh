@@ -11,10 +11,19 @@
 #include <cusparse.h>
 #include <device_launch_parameters.h>
 
+#include "../utils.h"
+#include "../CUDA/vector_math.h"
+
 namespace utils::cuda
 {
 	namespace math
 	{
+		struct plane
+		{
+			float4 origin;
+			float4 normal;
+		};
+
 		inline __host__ __device__ int floor(int x, int y)
 		{
 			return x / y;
@@ -23,6 +32,62 @@ namespace utils::cuda
 		inline __host__ __device__ int ceil(int x, int y) 
 		{
 			return static_cast<int>(::ceil(static_cast<double>(x) / y));
+		}
+
+		inline __host__ __device__ float length2(float4 a)
+		{
+			return dot(a, a);
+		}
+
+		inline __host__ __device__ float distance2(float4 a, float4 b)
+		{
+			float4 diff = a - b;
+			return length2(diff);
+		}
+
+		inline __host__ __device__ bool operator==(float4 a, float4 b)
+		{
+			return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+		}
+
+		inline __host__ __device__ bool operator!=(float4 a, float4 b)
+		{
+			return !operator==(a, b);
+		}
+
+		inline __host__ __device__ float4 normalize_or_zero_div(float4 vec)
+		{
+			float4 zero{ 0 };
+			if (vec == zero)
+				return zero;
+			else
+				return normalize(vec);
+		}
+
+		inline __host__ __device__ float4 normalize_or_zero(float4 vec)
+		{
+			float4 zero{ 0 }, normalized = normalize(vec);
+			float4 result[] = { zero, normalized };
+			int is_valid = vec != zero;
+			return result[is_valid]; // has to be 0 or 1, branchless
+		}
+
+		inline __host__ __device__ float distance_point_plane(float4 point, plane plane)
+		{
+			return dot(plane.normal, point - plane.origin);
+		}
+
+		inline __host__ __device__ float distance_point_plane(float4 point, utils::math::plane p)
+		{
+			float4 origin = { p.origin.r, p.origin.g, p.origin.b, p.origin.a };
+			float4 normal = { p.normal.r, p.normal.g, p.normal.b, p.normal.a };
+			plane converted{ origin, normal };
+			return distance_point_plane(point, converted);
+		}
+
+		inline __host__ __device__ void print_f4(const float4 f4)
+		{
+			printf("%.2f %.2f %.2f %.2f \n", f4.x, f4.y, f4.z, f4.w);
 		}
 	}
 

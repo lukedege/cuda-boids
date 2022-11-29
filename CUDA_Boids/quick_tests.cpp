@@ -1,5 +1,9 @@
 #include <iostream>
 
+#include <cuda_runtime.h>
+#include "utils/CUDA/cuda_utils.cuh"
+#include "utils/CUDA/vector_math.h"
+
 #include "utils/shader.h"
 #include "utils/window.h"
 #include "utils/mesh.h"
@@ -111,7 +115,7 @@ void opengl_main()
 	}
 }
 
-int mainz()
+void plane_test()
 {
 	float cube_size = 10;
 	glm::vec4 boid = { -1,3,9,0 };
@@ -121,7 +125,7 @@ int mainz()
 	utils::math::plane xm{ { -cube_size,0,0,0 }, {  1,0,0,0 } };
 	utils::math::plane yp{ { 0, cube_size,0,0 }, { 0,-1,0,0 } };
 	utils::math::plane ym{ { 0,-cube_size,0,0 }, { 0, 1,0,0 } };
-	std::vector<utils::math::plane> planes{zp,zm,xp,xm,yp,ym};
+	std::vector<utils::math::plane> planes{ zp,zm,xp,xm,yp,ym };
 	for (auto& p : planes)
 	{
 		float dist = utils::math::distance_point_plane(boid, p);
@@ -129,6 +133,43 @@ int mainz()
 		std::cout << 1 / dist;
 		std::cout << std::endl;
 	}
-	
+}
+
+__device__ int simple2(int a, int b)
+{
+	return a + b;
+}
+
+inline __host__ __device__ bool operator==(float4 a, float4 b)
+{
+	return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+
+inline __host__ __device__ bool operator!=(float4 a, float4 b)
+{
+	return !operator==(a,b);
+}
+
+inline __host__ __device__ float4 normalize_or_zero(float4 vec)
+{
+	float4 zero{ 0 }, normalized = normalize(vec);
+	float4 result[] = { zero, normalized };
+	int is_valid = vec != zero;
+	return result[is_valid]; // has to be 0 or 1, branchless
+}
+
+__global__ void simple()
+{
+	float4 ret{ 0 };
+	ret = normalize_or_zero(ret);
+	printf("ciao %.2f", ret.x);
+}
+
+
+
+int mainz()
+{	
+	simple CUDA_KERNEL(1, 1)();
+	cudaDeviceSynchronize();
 	return 0;
 }

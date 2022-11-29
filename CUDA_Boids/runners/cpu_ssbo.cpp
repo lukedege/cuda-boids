@@ -28,23 +28,28 @@ namespace utils::runners
 		setup_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, sizeof(glm::vec4), amount, 1, velocities.data());
 	}
 
-	void cpu_vel_ssbo::calculate(const float delta_time)
+	void cpu_vel_ssbo::naive_calculation(const float delta_time)
 	{
 		glm::vec4 accel_blend;
 		for (size_t i = 0; i < amount; i++)
 		{
-			accel_blend =  sim_params.alignment_coeff       * behaviours::cpu::naive::alignment      (i, positions.data(), velocities.data(), amount, sim_params.boid_fov)
-				         + sim_params.cohesion_coeff        * behaviours::cpu::naive::cohesion       (i, positions.data(), amount, sim_params.boid_fov)
-				         + sim_params.separation_coeff      * behaviours::cpu::naive::separation     (i, positions.data(), amount, sim_params.boid_fov)
-				         + sim_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), simulation_volume_planes.data(), amount);
+			accel_blend = sim_params.alignment_coeff * behaviours::cpu::naive::alignment(i, positions.data(), velocities.data(), amount, sim_params.boid_fov)
+				+ sim_params.cohesion_coeff * behaviours::cpu::naive::cohesion(i, positions.data(), amount, sim_params.boid_fov)
+				+ sim_params.separation_coeff * behaviours::cpu::naive::separation(i, positions.data(), amount, sim_params.boid_fov)
+				+ sim_params.wall_separation_coeff * behaviours::cpu::naive::wall_separation(i, positions.data(), sim_volume.data(), amount);
 
 			//velocities[i] = normalize(velocities[i]) + normalize(accel_blend) * delta_time; //v = u + at
 			velocities[i] = normalize(velocities[i] + accel_blend * delta_time); //v = u + at
-			positions [i] += velocities[i] * sim_params.boid_speed * delta_time; //s = vt
+			positions[i] += velocities[i] * sim_params.boid_speed * delta_time; //s = vt
 		}
 
-		update_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::vec4), amount, positions.data());
+		update_buffer_object(ssbo_positions, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::vec4), amount, positions.data());
 		update_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, 0, sizeof(glm::vec4), amount, velocities.data());
+	}
+
+	void cpu_vel_ssbo::calculate(const float delta_time)
+	{
+		naive_calculation(delta_time);
 	}
 
 	void cpu_vel_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)

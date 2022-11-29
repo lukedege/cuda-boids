@@ -81,18 +81,18 @@ int main()
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 10   },//boid_amount
+		{ 1000  },//boid_amount
 		{ 5.0f },//boid_speed
 		{ 10.f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
 		{ 0.8f },//separation_coeff
-		{ 10.0f },//wall_separation_coeff
+		{ 1.0f },//wall_separation_coeff
 		{ 10.f },//cube_size
 	};
 	//utils::runners::boid_runner* runner;
 
-	utils::runners::cpu_vel_ssbo runner{params};
+	utils::runners::gpu_vel_ssbo runner{params};
 	//runner = &spec_runner;
 	
 	// Camera setup

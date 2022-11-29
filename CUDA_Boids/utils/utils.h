@@ -5,6 +5,7 @@
 #include <random>
 
 #include <glm/glm.hpp>
+#include "CUDA/vector_math.h"
 
 namespace utils
 {

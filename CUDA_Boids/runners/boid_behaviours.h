@@ -7,7 +7,6 @@
 namespace utils::runners::behaviours::cpu::naive
 {
 	//TODO check if behaviours are CORRECT
-
 	inline glm::vec4 alignment(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount, size_t max_radius)
 	{
 		glm::vec4 alignment{ 0 };
@@ -71,12 +70,10 @@ namespace utils::runners::behaviours::cpu::naive
 			for (size_t b = 0; b < 6; b++)
 			{
 				distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-				if (distance < 1)
-				{
-					distance = distance * 0.01f;
-					repulsion = borders[b].normal / abs(distance);
-					separation += repulsion;
-				}
+				//if distance < 1 
+				//distance = distance * 0.01f;
+				repulsion = borders[b].normal / abs(distance);
+				separation += repulsion;
 			}
 		}
 

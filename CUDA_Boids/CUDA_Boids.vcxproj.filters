@@ -119,13 +119,13 @@
     <CudaCompile Include="runners\gpu_vao.cpp">
       <Filter>Sources\Runners\vao_runners</Filter>
     </CudaCompile>
+    <CudaCompile Include="quick_tests.cpp">
+      <Filter>Sources</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c">
       <Filter>Sources\Libraries</Filter>
-    </ClCompile>
-    <ClCompile Include="quick_tests.cpp">
-      <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Sources</Filter>

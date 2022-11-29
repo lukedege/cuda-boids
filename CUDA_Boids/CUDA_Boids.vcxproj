@@ -126,7 +126,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="quick_tests.cpp" />
+    <CudaCompile Include="quick_tests.cpp" />
     <ClCompile Include="runners\cpu_ssbo.cpp" />
     <ClCompile Include="runners\cpu_vao.cpp" />
     <CudaCompile Include="runners\gpu_vao.cpp" />

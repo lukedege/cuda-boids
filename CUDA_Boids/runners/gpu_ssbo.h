@@ -11,7 +11,7 @@ namespace utils::runners
 	class gpu_vel_ssbo : public ssbo_runner
 	{
 	public:
-		gpu_vel_ssbo();
+		gpu_vel_ssbo(simulation_parameters params);
 
 		void calculate(const float delta_time);
 
@@ -23,6 +23,8 @@ namespace utils::runners
 		void set_simulation_parameters(simulation_parameters new_params);
 
 	private:
+		void naive_calculation(const float delta_time);
+
 		utils::graphics::opengl::Shader shader;
 
 		size_t amount;
@@ -34,6 +36,9 @@ namespace utils::runners
 		size_t grid_size;
 
 		utils::cuda::gl_manager cuda_gl_manager;
+		simulation_parameters* sim_params_dptr;
+		utils::math::plane* sim_volume_dptr;
+
 		float4* ssbo_positions_dptr;
 		float4* ssbo_velocities_dptr;
 

@@ -32,14 +32,14 @@ namespace utils::runners
 
 	protected:
 		boid_runner() : 
-			simulation_volume_planes { reset_volume() },
+			sim_volume { reset_volume() },
 			cube_mesh{ reset_cube_mesh() },
 			debug_shader { "shaders/mvp.vert", "shaders/basic.frag" }
 		{}
 
 		boid_runner(simulation_parameters params) :
 			sim_params{ params },
-			simulation_volume_planes{ reset_volume() },
+			sim_volume{ reset_volume() },
 			cube_mesh{ reset_cube_mesh() },
 			debug_shader{ "shaders/mvp.vert", "shaders/basic.frag" }
 		{
@@ -107,9 +107,11 @@ namespace utils::runners
 			glBindBuffer(target, 0);
 		}
 
+		// Simulation related data
 		simulation_parameters sim_params;
+		std::array<utils::math::plane,6> sim_volume;
 
-		std::array<utils::math::plane,6> simulation_volume_planes;
+		// Debug and visualization related data
 		utils::graphics::opengl::Mesh cube_mesh;
 		utils::graphics::opengl::Shader debug_shader;
 

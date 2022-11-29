@@ -20,6 +20,8 @@ namespace utils::runners
 		void set_simulation_parameters(simulation_parameters new_params);
 
 	private:
+		void naive_calculation(const float delta_time);
+
 		utils::graphics::opengl::Shader shader; //TODO moveable to ssbo/vao parent class
 
 		size_t amount; //TODO possibly redundant
