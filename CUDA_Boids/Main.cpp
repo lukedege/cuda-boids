@@ -14,7 +14,6 @@
 
 // utils libraries
 #include "utils/window.h"
-#include "utils/camera.h"
 #include "utils/orbit_camera.h"
 
 #include "runners/gpu_ssbo.h"
@@ -28,11 +27,11 @@ namespace ugl = utils::graphics::opengl;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mode);
+void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void process_keys(ugl::window& window, GLfloat delta_time);
 
 GLfloat mouse_last_x, mouse_last_y, x_offset, y_offset;
-bool first_mouse = true;
-bool left_mouse_pressed, right_mouse_pressed;
+bool left_mouse_pressed;
 
 bool keys[1024];
 
@@ -64,13 +63,14 @@ int main()
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 	glfwSetMouseButtonCallback(glfw_window, mouse_button_callback);
+	glfwSetScrollCallback(glfw_window, mouse_scroll_callback);
 	
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 30 },//boid_amount
+		{ 1000 },//boid_amount
 		{ 5.0f },//boid_speed
-		{ 5.0f },//boid_fov
+		{ 10.0f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
 		{ 1.0f },//separation_coeff
@@ -148,47 +148,32 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mode)
 {
-	left_mouse_pressed  = (button == GLFW_MOUSE_BUTTON_LEFT  && action == GLFW_PRESS);
-	right_mouse_pressed = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
+	left_mouse_pressed  = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
 }
 
 void mouse_pos_callback(GLFWwindow* window, double xpos, double ypos) {
 	int width, height;
 	glfwGetWindowSize(window, &width, &height);
 	float fwidth = static_cast<float>(width), fheight = static_cast<float>(height);
-	float zoom = camera.get_distance(), phi = camera.get_phi(), theta = camera.get_theta();
+	float phi = camera.get_phi(), theta = camera.get_theta();
 
-	if (left_mouse_pressed) {
+	if (left_mouse_pressed) 
+	{
 		// compute new camera parameters with polar (spherical) coordinates
-		phi   += (xpos - mouse_last_x) / fwidth;
+		phi   += (xpos - mouse_last_x) / fwidth ;
 		theta -= (ypos - mouse_last_y) / fheight;
 		theta = std::clamp(theta, 0.01f, 3.14f);
-		//theta = std::fmax(0.01f, std::fmin(theta, 3.14f));
-		camera.update(zoom, phi, theta);
-	}
-	else if (right_mouse_pressed) {
-		zoom += (ypos - mouse_last_y) / fheight;
-		zoom = std::clamp(zoom, 0.1f, 100.0f);
-		//zoom = std::fmax(0.1f, std::fmin(zoom, 5.0f));
-		camera.update(zoom, phi, theta);
+		camera.update_angle(phi, theta);
 	}
 
 	mouse_last_x = xpos;
 	mouse_last_y = ypos;
 }
 
-//void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
-//{
-//	if (first_mouse)
-//	{
-//		mouse_last_x = x_pos;
-//		mouse_last_y = y_pos;
-//		first_mouse = false;
-//	}
-//
-//	x_offset = x_pos - mouse_last_x;
-//	y_offset = mouse_last_y - y_pos;
-//
-//	mouse_last_x = x_pos;
-//	mouse_last_y = y_pos;
-//}
+void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	float zoom = camera.get_distance();
+	zoom -= yoffset;
+	zoom = std::clamp(zoom, 0.1f, 100.0f);
+	camera.update_distance(zoom);
+}

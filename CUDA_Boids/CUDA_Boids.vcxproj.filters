@@ -57,9 +57,6 @@
     <ClInclude Include="utils\mesh.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\camera.h">
-      <Filter>Headers\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\CUDA\cudaGLmanager.h">
       <Filter>Headers\utils\CUDA</Filter>
     </ClInclude>
@@ -97,6 +94,9 @@
       <Filter>Headers\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\orbit_camera.h">
+      <Filter>Headers\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\camera.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
   </ItemGroup>

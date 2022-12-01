@@ -5,6 +5,7 @@
 
 namespace utils::graphics::opengl
 {
+	// Control camera using spherical coordinates (distance, polar angle, azimuth angle)
 	class orbit_camera
 	{
 		const float SPEED = 6.f;
@@ -23,9 +24,16 @@ namespace utils::graphics::opengl
 			return glm::lookAt(pos, look_at, glm::vec3(0,0,1));
 		}
 
-		// Update camera using spherical coordinates (distance, polar angle, azimuth angle)
-		void update(float distance, float phi, float theta)
+		void update_angle(float phi, float theta)
 		{
+			this->phi = phi;
+			this->theta = theta;
+			pos = position(distance, phi, theta);
+		}
+
+		void update_distance(float distance)
+		{
+			this->distance = distance;
 			pos = position(distance, phi, theta);
 		}
 
