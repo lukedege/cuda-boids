@@ -5,15 +5,15 @@
 
 namespace utils::graphics::opengl
 {
-	const float YAW = -90.f;
-	const float PITCH = 0.f;
-	const float ROLL = 0.f;
-
-	const float SPEED = 6.f;
-	const float SENSITIVITY = 0.05f;
-
 	class Camera
 	{
+		const float YAW = -90.f;
+		const float PITCH = 0.f;
+		const float ROLL = 0.f;
+
+		const float SPEED = 6.f;
+		const float SENSITIVITY = 0.05f;
+
 		glm::vec3 pos, front, up, right;
 		glm::vec3 world_front, world_up;
 
@@ -95,7 +95,7 @@ namespace utils::graphics::opengl
 			// TODO add roll
 			float yaw_r = glm::radians(yaw),
 				pitch_r = glm::radians(pitch),
-				roll_r = glm::radians(roll);
+				roll_r  = glm::radians(roll);
 
 			front.x = cos(yaw_r) * cos(pitch_r);
 			front.y = sin(pitch_r);

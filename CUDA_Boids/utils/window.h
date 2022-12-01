@@ -65,8 +65,16 @@ namespace utils::graphics::opengl
 			GLboolean   gl_debug         { GLFW_FALSE };
 		};
 
+		struct window_size
+		{
+			int width;
+			int height;
+		};
+
 
 		window(window_create_info create_info) : glfw_window{ init(create_info) } {}
+
+		window(GLFWwindow* window) : glfw_window{ window } {}
 
 		~window(){ glfwTerminate(); }
 
@@ -75,7 +83,7 @@ namespace utils::graphics::opengl
 			return glfw_window;
 		}
 
-		std::pair<int, int> get_size()
+		window_size get_size()
 		{
 			int width, height;
 			glfwGetWindowSize(glfw_window, &width, &height);

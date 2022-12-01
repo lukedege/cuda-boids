@@ -117,6 +117,7 @@
     <CudaCompile Include="utils\CUDA\cuda_utils.h" />
     <ClInclude Include="utils\CUDA\vector_math.h" />
     <ClInclude Include="utils\mesh.h" />
+    <ClInclude Include="utils\orbit_camera.h" />
     <ClInclude Include="utils\shader.h" />
     <ClInclude Include="utils\utils.h" />
     <ClInclude Include="utils\window.h" />

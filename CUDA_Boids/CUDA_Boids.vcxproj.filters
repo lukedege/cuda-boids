@@ -96,6 +96,9 @@
     <ClInclude Include="utils\shader.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
+    <ClInclude Include="utils\orbit_camera.h">
+      <Filter>Headers\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="old_main2.cpp">

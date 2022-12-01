@@ -15,6 +15,7 @@
 // utils libraries
 #include "utils/window.h"
 #include "utils/camera.h"
+#include "utils/orbit_camera.h"
 
 #include "runners/gpu_ssbo.h"
 #include "runners/cpu_ssbo.h"
@@ -26,12 +27,16 @@ namespace ugl = utils::graphics::opengl;
 // input stuff TODO: MOVE SOMEWHERE ELSE
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos);
-void process_camera_input(ugl::Camera& cam, GLfloat delta_time);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mode);
+void process_keys(ugl::window& window, GLfloat delta_time);
 
 GLfloat mouse_last_x, mouse_last_y, x_offset, y_offset;
 bool first_mouse = true;
+bool left_mouse_pressed, right_mouse_pressed;
 
 bool keys[1024];
+
+ugl::orbit_camera camera{ glm::vec3(0, 0, 0), 50.f };
 
 int main()
 {
@@ -52,26 +57,25 @@ int main()
 	};
 
 	GLFWwindow* glfw_window = wdw.get();
-	auto window_size = wdw.get_size();
+	ugl::window::window_size ws = wdw.get_size();
+	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);
 
 	// setup callbacks
 	glfwSetKeyCallback(glfw_window, key_callback);
-	//glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
-
-	// we disable the mouse cursor
-	//glfwSetInputMode(glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
+	glfwSetMouseButtonCallback(glfw_window, mouse_button_callback);
 	
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 1000 },//boid_amount
+		{ 30 },//boid_amount
 		{ 5.0f },//boid_speed
 		{ 5.0f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
 		{ 1.0f },//separation_coeff
 		{ 10.0f },//wall_separation_coeff
-		{ 10.f },//cube_size
+		{ 20.f },//cube_size
 	};
 	//utils::runners::boid_runner* runner;
 
@@ -79,8 +83,8 @@ int main()
 	//runner = &spec_runner;
 	
 	// Camera setup
-	ugl::Camera camera{ glm::vec3(0, 0, 50), GL_FALSE };
-	glm::mat4 projection_matrix = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
+	
+	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
 
 	GLfloat delta_time = 0.0f, last_frame = 0.0f, current_fps = 0.0f;
@@ -97,9 +101,8 @@ int main()
 		last_frame = currentFrame;
 
 		glfwPollEvents();
-		process_camera_input(camera, delta_time);
-		view_matrix = camera.GetViewMatrix();
-
+		process_keys(wdw, delta_time);
+		
 		// we "clear" the frame and z buffer
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -110,8 +113,9 @@ int main()
 
 		after_calculations = glfwGetTime(); // TODO measure time for kernel using CudaEvents
 		delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
-
-		runner.draw(view_matrix, projection_matrix);
+		
+		view_matrix = camera.view_matrix();
+		runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
 
 		current_fps = (1 / delta_time);
 		//std::cout << "Calcs: " << delta_calculations << "ms | ";
@@ -128,23 +132,12 @@ int main()
 	return 0;
 }
 
-void process_camera_input(ugl::Camera& cam, GLfloat delta_time)
+void process_keys(ugl::window& window, GLfloat delta_time)
 {
-	cam.ProcessMouseMovement(x_offset, y_offset);
-	x_offset = 0; y_offset = 0;
-	if (keys[GLFW_KEY_Q])
-		cam.ProcessKeyboard(ugl::Camera::Directions::BACKWARD, delta_time);
-	if (keys[GLFW_KEY_E])
-		cam.ProcessKeyboard(ugl::Camera::Directions::FORWARD, delta_time);
-	if (keys[GLFW_KEY_A])
-		cam.ProcessKeyboard(ugl::Camera::Directions::LEFT, delta_time);
-	if (keys[GLFW_KEY_D])
-		cam.ProcessKeyboard(ugl::Camera::Directions::RIGHT, delta_time);
-	if (keys[GLFW_KEY_W])
-		cam.ProcessKeyboard(ugl::Camera::Directions::UP, delta_time);
-	if (keys[GLFW_KEY_S])
-		cam.ProcessKeyboard(ugl::Camera::Directions::DOWN, delta_time);
+	if (keys[GLFW_KEY_ESCAPE])
+		window.close();
 }
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (action == GLFW_PRESS)
@@ -152,18 +145,50 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	else if (action == GLFW_RELEASE)
 		keys[key] = false;
 }
-void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mode)
 {
-	if (first_mouse)
-	{
-		mouse_last_x = x_pos;
-		mouse_last_y = y_pos;
-		first_mouse = false;
+	left_mouse_pressed  = (button == GLFW_MOUSE_BUTTON_LEFT  && action == GLFW_PRESS);
+	right_mouse_pressed = (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS);
+}
+
+void mouse_pos_callback(GLFWwindow* window, double xpos, double ypos) {
+	int width, height;
+	glfwGetWindowSize(window, &width, &height);
+	float fwidth = static_cast<float>(width), fheight = static_cast<float>(height);
+	float zoom = camera.get_distance(), phi = camera.get_phi(), theta = camera.get_theta();
+
+	if (left_mouse_pressed) {
+		// compute new camera parameters with polar (spherical) coordinates
+		phi   += (xpos - mouse_last_x) / fwidth;
+		theta -= (ypos - mouse_last_y) / fheight;
+		theta = std::clamp(theta, 0.01f, 3.14f);
+		//theta = std::fmax(0.01f, std::fmin(theta, 3.14f));
+		camera.update(zoom, phi, theta);
+	}
+	else if (right_mouse_pressed) {
+		zoom += (ypos - mouse_last_y) / fheight;
+		zoom = std::clamp(zoom, 0.1f, 100.0f);
+		//zoom = std::fmax(0.1f, std::fmin(zoom, 5.0f));
+		camera.update(zoom, phi, theta);
 	}
 
-	x_offset = x_pos - mouse_last_x;
-	y_offset = mouse_last_y - y_pos;
-
-	mouse_last_x = x_pos;
-	mouse_last_y = y_pos;
+	mouse_last_x = xpos;
+	mouse_last_y = ypos;
 }
+
+//void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos)
+//{
+//	if (first_mouse)
+//	{
+//		mouse_last_x = x_pos;
+//		mouse_last_y = y_pos;
+//		first_mouse = false;
+//	}
+//
+//	x_offset = x_pos - mouse_last_x;
+//	y_offset = mouse_last_y - y_pos;
+//
+//	mouse_last_x = x_pos;
+//	mouse_last_y = y_pos;
+//}

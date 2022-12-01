@@ -32,7 +32,8 @@ void opengl_main()
 	};
 
 	GLFWwindow* glfw_window = wdw.get();
-	auto window_size = wdw.get_size();
+	ugl::window::window_size ws = wdw.get_size();
+	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);
 
 	std::vector<glm::vec3> positions
 	{
@@ -80,7 +81,7 @@ void opengl_main()
 	shader.use();
 
 	ugl::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
-	glm::mat4 projection_matrix = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
+	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
 
 	while (wdw.is_open())
