@@ -1,34 +1,32 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/gtx/norm.hpp>
 
+#include "../utils/utils.h"
 #include "../utils/CUDA/vector_math.h"
 
 namespace utils::runners::behaviours::cpu::naive
 {
-	//TODO check if behaviours are CORRECT
-	inline glm::vec4 alignment(size_t current, glm::vec4* positions, glm::vec4* velocities, size_t amount, size_t max_radius)
+	inline float4 alignment(size_t current, float4* positions, float4* velocities, size_t amount, size_t max_radius)
 	{
-		glm::vec4 alignment{ 0 };
+		float4 alignment{ 0 };
 		bool in_radius;
 		for (size_t i = 0; i < amount; i++)
 		{
-			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
+			in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
 			if(in_radius)
 				alignment += velocities[i];
 		}
 
-		return utils::math::normalize(alignment);
+		return utils::math::normalize_or_zero(alignment);
 	}
 
-	inline glm::vec4 cohesion(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
+	inline float4 cohesion(size_t current, float4* positions, size_t amount, size_t max_radius)
 	{
-		glm::vec4 cohesion{ 0 }, baricenter{ 0 };
+		float4 cohesion{ 0 }, baricenter{ 0 };
 		float counter{ 0 };
 		bool in_radius;
 		for (size_t i = 0; i < amount; i++)
 		{
-			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
+			in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
 			if (in_radius)
 			{
 				baricenter += positions[i];
@@ -37,47 +35,45 @@ namespace utils::runners::behaviours::cpu::naive
 		}
 		baricenter /= counter;
 		cohesion = baricenter - positions[current];
-		return utils::math::normalize(cohesion);
+		return utils::math::normalize_or_zero(cohesion);
 	}
 
-	inline glm::vec4 separation(size_t current, glm::vec4* positions, size_t amount, size_t max_radius)
+	inline float4 separation(size_t current, float4* positions, size_t amount, size_t max_radius)
 	{
-		glm::vec4 separation{ 0 };
-		glm::vec4 repulsion;
-		bool in_radius;
+		float4 separation{ 0 };
+		float4 repulsion;
+		float in_radius;
 		// boid check
 		for (size_t i = 0; i < amount; i++)
 		{
-			in_radius = glm::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			if (in_radius)
-			{
-				repulsion = positions[current] - positions[i]; // TODO sottrazione e distance2 sono ridondanti, ottimizza
-				separation += utils::math::normalize(repulsion) / (glm::length(repulsion) + 0.0001f);
-			}
+			repulsion = positions[current] - positions[i];
+			in_radius = utils::math::length2(repulsion) < max_radius * max_radius;
+			if(in_radius)
+				separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f)); 
 		}
 
-		return utils::math::normalize(separation);
+		return utils::math::normalize_or_zero(separation);
 	}
 
-	inline glm::vec4 wall_separation(size_t current, glm::vec4* positions, utils::math::plane* borders, size_t amount)
+	inline float4 wall_separation(size_t current, float4* positions, utils::math::plane* borders, size_t amount)
 	{
-		glm::vec4 separation{ 0 };
-		glm::vec4 repulsion;
+		float4 separation{ 0 };
+		float4 repulsion;
 		float distance;
+		float near_wall;
 		// wall check
 		for (size_t i = 0; i < amount; i++)
 		{
 			for (size_t b = 0; b < 6; b++)
 			{
 				distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-				//if distance < 1 
-				//distance = distance * 0.01f;
-				repulsion = borders[b].normal / abs(distance);
+				near_wall = distance < 1.f;
+				repulsion = (borders[b].normal / abs(distance)) * near_wall;
 				separation += repulsion;
 			}
 		}
 
-		return utils::math::normalize(separation);
+		return utils::math::normalize_or_zero(separation);
 	}
 }
 

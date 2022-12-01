@@ -13,98 +13,94 @@
 
 // utils libraries
 #include "../utils/CUDA/vector_math.h"
-#include "../utils/CUDA/cuda_utils.cuh"
+#include "../utils/CUDA/cuda_utils.h"
 #include "../utils/utils.h"
 #include "boid_behaviours.h"
 
 namespace
-{
-	// TODO move maths helpers in utils
-	
+{	
 	__global__ void alignment      (float4* alignments     , float4* positions, float4* velocities, size_t amount, utils::runners::boid_runner::simulation_parameters* sim_params)
 	{
 		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current < amount)
+		if (current >= amount) return; // avoid threads ids overflowing the array
+		
+		size_t max_radius = sim_params->boid_fov;// maybe passing the whole simparams is not that cool, maybe passing by value is just fine (we just need the fov)			
+		float4 alignment{ 0 };
+		bool in_radius;
+		for (size_t i = 0; i < amount; i++)
 		{
-			size_t max_radius = sim_params->boid_fov;// maybe passing the whole simparams is not that cool, maybe passing by value is just fine (we just need the fov)			
-			float4 alignment{ 0 };
-			bool in_radius;
-			for (size_t i = 0; i < amount; i++)
-			{
-				// condition as multiplier avoids warp divergence
-				in_radius = utils::cuda::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
-				alignment += velocities[i] * in_radius;
-			}
-
-			alignments[current] = utils::cuda::math::normalize_or_zero(alignment);
+			// condition as multiplier avoids warp divergence
+			in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
+			alignment += velocities[i] * in_radius;
 		}
+
+		alignments[current] = utils::math::normalize_or_zero(alignment);
+		
 	}
 	__global__ void cohesion       (float4* cohesions      , float4* positions, size_t amount, utils::runners::boid_runner::simulation_parameters* sim_params)
 	{
 		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current < amount)
+		if (current >= amount) return;
+		
+		size_t max_radius = sim_params->boid_fov;
+		float4 cohesion{ 0 }, baricenter{ 0 };
+		float counter{ 0 };
+		bool in_radius;
+		for (size_t i = 0; i < amount; i++)
 		{
-			size_t max_radius = sim_params->boid_fov;
-			float4 cohesion{ 0 }, baricenter{ 0 };
-			float counter{ 0 };
-			bool in_radius;
-			for (size_t i = 0; i < amount; i++)
-			{
-				in_radius = utils::cuda::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
-				
-				baricenter += positions[i] * in_radius;
-				counter += 1.f * in_radius;
-			}
-			if(counter > 0)
-				baricenter /= counter;
-			cohesion = baricenter - positions[current];
-			cohesions[current] = utils::cuda::math::normalize_or_zero(cohesion);
+			in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
+			
+			baricenter += positions[i] * in_radius;
+			counter += 1.f * in_radius;
 		}
+		baricenter /= counter;
+		cohesion = baricenter - positions[current];
+		cohesions[current] = utils::math::normalize_or_zero(cohesion);
+		
 	}
 	__global__ void separation     (float4* separations    , float4* positions, size_t amount, utils::runners::boid_runner::simulation_parameters* sim_params)
 	{
 		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current < amount)
-		{
-			size_t max_radius = sim_params->boid_fov;
-			float4 separation{ 0 };
-			float4 repulsion;
-			bool in_radius;
-			// boid check
-			for (size_t i = 0; i < amount; i++)
-			{
-				repulsion = positions[current] - positions[i];
-				in_radius = utils::cuda::math::length2(repulsion) < max_radius * max_radius;
-				separation += (utils::cuda::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f)) * in_radius; //TODO may be more optimizable but we'll see
-			}
+		if (current >= amount) return;
 
-			separations[current] = utils::cuda::math::normalize_or_zero(separation);
+		size_t max_radius = sim_params->boid_fov;
+		float4 separation{ 0 };
+		float4 repulsion;
+		bool in_radius;
+
+		// boid check
+		for (size_t i = 0; i < amount; i++)
+		{
+			repulsion = positions[current] - positions[i];
+			in_radius = utils::math::length2(repulsion) < max_radius * max_radius;
+			separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f)) * in_radius; //TODO may be more optimizable but we'll see
 		}
+
+		separations[current] = utils::math::normalize_or_zero(separation);
 	}
 	__global__ void wall_separation(float4* wall_separations, float4* positions, utils::math::plane* borders, size_t amount)
 	{
 		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current < amount)
+		if (current >= amount) return;
+		
+		float4 separation{ 0 };
+		float4 repulsion;
+		float4 plane_normal;
+		float distance;
+		float near_wall;
+		// wall check
+		for (size_t i = 0; i < amount; i++)
 		{
-			float4 separation{ 0 };
-			float4 repulsion;
-			float4 plane_normal;
-			float distance;
-			// wall check
-			for (size_t i = 0; i < amount; i++)
+			for (size_t b = 0; b < 6; b++)
 			{
-				for (size_t b = 0; b < 6; b++)
-				{
-					distance = utils::cuda::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-					plane_normal = { borders[b].normal.r, borders[b].normal.g, borders[b].normal.b, borders[b].normal.a };
-					repulsion = plane_normal / abs(distance);
-					separation += repulsion;
-
-				}
+				distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
+				near_wall = distance < 1.f;
+				repulsion = (borders[b].normal / abs(distance)) * near_wall;
+				separation += repulsion;
 			}
-
-			wall_separations[current] = utils::cuda::math::normalize_or_zero(separation);
 		}
+
+		wall_separations[current] = utils::math::normalize_or_zero(separation);
 	}
 
 	__global__ void blender(float4* ssbo_positions, float4* ssbo_velocities, 
@@ -112,50 +108,47 @@ namespace
 		utils::runners::boid_runner::simulation_parameters* simulation_params, size_t amount, const float delta_time)
 	{
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i < amount)
-		{
+		if (i >= amount) return;
+		
+		float cs = simulation_params->cube_size;
+		float4 accel_blend;
 
-			float4 accel_blend;
+		accel_blend = simulation_params->alignment_coeff * alignments[i]
+			+ simulation_params->cohesion_coeff * cohesions[i]
+			+ simulation_params->separation_coeff * separations[i]
+			+ simulation_params->wall_separation_coeff * wall_separations[i];
 
-			accel_blend = simulation_params->alignment_coeff * alignments[i]
-				+ simulation_params->cohesion_coeff * cohesions[i]
-				+ simulation_params->separation_coeff * separations[i]
-				+ simulation_params->wall_separation_coeff * wall_separations[i];
-
-			ssbo_velocities[i] = utils::cuda::math::normalize_or_zero(ssbo_velocities[i] + accel_blend * delta_time); //v = u + at
-			ssbo_positions[i] += ssbo_velocities[i] * simulation_params->boid_speed * delta_time; //s = vt
-			
-		}
+		ssbo_velocities[i] = utils::math::normalize_or_zero(ssbo_velocities[i] + accel_blend * delta_time); //v = u + at
+		ssbo_positions[i] += ssbo_velocities[i] * simulation_params->boid_speed * delta_time; //s = vt
+		ssbo_positions[i] = clamp(ssbo_positions[i], { -cs,-cs,-cs,0 }, { cs,cs,cs,0 }); // ensures boids remain into the cube
 	}
 
 }
 
+// 1) crea l'array per la griglia con una certa gridresolution
+// 2) data la loro posizione, affibbia un indice di griglia a ogni boid(indice 3d{ i,j,k } che però può e deve essere linearizzato)
+// 3) ordina l'array di boid secondo la loro posizione di griglia(scattered=ordina solo il boid index, coherent = ordina pure velocities e positions)
+// 4) calcola "start" e "end" di ogni cella della griglia(ovvero il range di indici uguali dei boid adiacenti)
+// 5) calcola le velocità usando solo quella cella come neighborhood(o al peggio checka le 8 adiacenti(? )(da controllare))
+
 namespace utils::runners
 {
-	gpu_vel_ssbo::gpu_vel_ssbo(simulation_parameters params) :
-		ssbo_runner{ params },
-		shader{ "shaders/ssbo.vert", "shaders/basic.frag"},
+	gpu_ssbo::gpu_ssbo(simulation_parameters params) :
+		ssbo_runner{ {"shaders/ssbo.vert", "shaders/basic.frag"}, params },
 		amount{ sim_params.boid_amount },
-		triangle_mesh{setup_mesh()},
-		positions { std::vector<glm::vec4>(amount) },// TODO unified memory or transfers
-		velocities{ std::vector<glm::vec4>(amount) },// TODO unified memory or transfers
-		block_size{ 32 },
-		grid_size{ static_cast<size_t>(utils::cuda::math::ceil(amount, block_size)) },
-		ssbo_positions_dptr { nullptr },
-		ssbo_velocities_dptr{ nullptr }
+		ssbo_positions_dptr{ nullptr },
+		ssbo_velocities_dptr{ nullptr },
+		block_size{ 128 },
+		grid_size{ static_cast<size_t>(utils::math::ceil(amount, block_size)) }
 	{
-		// shader storage buffer objects
-		GLuint ssbo_positions;
-		GLuint ssbo_velocities;
-
-		utils::containers::random_vec4_fill_cpu(positions, -20, 20);
-		utils::containers::random_vec4_fill_cpu(velocities, -1, 1);
-
-		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 0, positions.data());
-		setup_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 1, velocities.data());
+		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 0, 0);
+		setup_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 1, 0);
 
 		ssbo_positions_dptr  = (float4*)cuda_gl_manager.add_resource(ssbo_positions , cudaGraphicsMapFlagsNone);
 		ssbo_velocities_dptr = (float4*)cuda_gl_manager.add_resource(ssbo_velocities, cudaGraphicsMapFlagsNone);
+
+		utils::cuda::containers::random_vec4_fill_dptr(ssbo_positions_dptr, amount, -sim_params.cube_size, sim_params.cube_size);
+		utils::cuda::containers::random_vec4_fill_dptr(ssbo_velocities_dptr, amount, -1, 1);
 
 		// manual transfers are sufficient since transfers on these variables are occasional and one-sided only (CPU->GPU)
 		cudaMalloc(&sim_params_dptr, sizeof(simulation_parameters) );
@@ -169,26 +162,29 @@ namespace utils::runners
 		cudaMalloc(&cohesions_dptr       , amount * sizeof(float4));
 		cudaMalloc(&separations_dptr     , amount * sizeof(float4));
 		cudaMalloc(&wall_separations_dptr, amount * sizeof(float4));
+
+		// create streams
+		cudaStreamCreate(&ali_stream); cudaStreamCreate(&coh_stream); cudaStreamCreate(&sep_stream); cudaStreamCreate(&wsp_stream);
 	}
 
-	void gpu_vel_ssbo::naive_calculation(const float delta_time)
+	void gpu_ssbo::naive_calculation(const float delta_time)
 	{
-		alignment       CUDA_KERNEL(grid_size, block_size)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params_dptr);
-		cohesion        CUDA_KERNEL(grid_size, block_size)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params_dptr);
-		separation      CUDA_KERNEL(grid_size, block_size)(separations_dptr, ssbo_positions_dptr, amount, sim_params_dptr);
-		wall_separation CUDA_KERNEL(grid_size, block_size)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
+		alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params_dptr);
+		cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params_dptr);
+		separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, sim_params_dptr);
+		wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
 		cudaDeviceSynchronize();
 
 		blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
 
-	void gpu_vel_ssbo::calculate(const float delta_time)
+	void gpu_ssbo::calculate(const float delta_time)
 	{
 		naive_calculation(delta_time);
 	}
 
-	void gpu_vel_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
+	void gpu_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
 	{
 		// Update references to view and projection matrices
 		update_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), 1, (void*)glm::value_ptr(view_matrix));
@@ -201,12 +197,13 @@ namespace utils::runners
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		// Setup and draw boids
-		shader.use();
+		boid_shader.use();
 		triangle_mesh.draw_instanced(amount);
 	}
 
-	gpu_vel_ssbo::~gpu_vel_ssbo()
+	gpu_ssbo::~gpu_ssbo()
 	{
+		cudaStreamDestroy(ali_stream); cudaStreamDestroy(coh_stream); cudaStreamDestroy(sep_stream); cudaStreamDestroy(wsp_stream);
 		cudaFree(&sim_params_dptr);
 		cudaFree(&sim_volume_dptr);
 		cudaFree(&alignments_dptr      );
@@ -215,12 +212,12 @@ namespace utils::runners
 		cudaFree(&wall_separations_dptr);
 	}
 
-	gpu_vel_ssbo::simulation_parameters gpu_vel_ssbo::get_simulation_parameters()
+	gpu_ssbo::simulation_parameters gpu_ssbo::get_simulation_parameters()
 	{
 		return sim_params;
 	}
 
-	void gpu_vel_ssbo::set_simulation_parameters(simulation_parameters new_params)
+	void gpu_ssbo::set_simulation_parameters(simulation_parameters new_params)
 	{
 		sim_params = new_params;
 		cudaMemcpy(sim_params_dptr, &sim_params, 1, cudaMemcpyHostToDevice);

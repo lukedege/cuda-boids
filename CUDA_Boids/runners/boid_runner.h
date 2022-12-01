@@ -31,16 +31,11 @@ namespace utils::runners
 		virtual void set_simulation_parameters(simulation_parameters new_params) = 0;
 
 	protected:
-		boid_runner() : 
-			sim_volume { reset_volume() },
-			cube_mesh{ reset_cube_mesh() },
-			debug_shader { "shaders/mvp.vert", "shaders/basic.frag" }
-		{}
-
-		boid_runner(simulation_parameters params) :
+		boid_runner(utils::graphics::opengl::Shader&& boid_shader, simulation_parameters params = {}) :
 			sim_params{ params },
 			sim_volume{ reset_volume() },
 			cube_mesh{ reset_cube_mesh() },
+			boid_shader{ std::move(boid_shader) },
 			debug_shader{ "shaders/mvp.vert", "shaders/basic.frag" }
 		{
 			setup_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 2, 0);
@@ -113,6 +108,7 @@ namespace utils::runners
 
 		// Debug and visualization related data
 		utils::graphics::opengl::Mesh cube_mesh;
+		utils::graphics::opengl::Shader boid_shader;
 		utils::graphics::opengl::Shader debug_shader;
 
 		GLuint ubo_matrices; // for camera's projection and view matrices

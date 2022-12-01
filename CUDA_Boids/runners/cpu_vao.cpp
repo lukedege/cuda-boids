@@ -13,13 +13,14 @@
 
 namespace utils::runners
 {
-	cpu_vel_vao::cpu_vel_vao(const size_t amount) :
-		shader{ "shaders/vao.vert", "shaders/basic.frag", "shaders/vao.geom"},
-		amount{ amount },
+	cpu_vao::cpu_vao(simulation_parameters params) :
+		vao_runner{ { "shaders/vao.vert", "shaders/basic.frag", "shaders/vao.geom"}, params },
+		amount{ params.boid_amount },
 		positions { std::vector<glm::vec3>(amount) },
 		velocities{ std::vector<glm::vec3>(amount) }
 	{
-		utils::containers::random_vec3_fill_cpu(positions , -20, 20);
+		// TODO convert to vec4
+		//utils::containers::random_vec3_fill_cpu(positions , -20, 20);
 		//utils::containers::random_vec3_fill_cpu(velocities, -2, 2);
 
 		glGenVertexArrays(1, &vao);
@@ -31,7 +32,7 @@ namespace utils::runners
 		glBindVertexArray(0);
 	}
 	
-	void cpu_vel_vao::calculate(const float delta_time)
+	void cpu_vao::calculate(const float delta_time)
 	{
 		glm::vec3 vel{1,1,0};
 		for (size_t i = 0; i < amount; i++)
@@ -49,11 +50,11 @@ namespace utils::runners
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	void cpu_vel_vao::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
+	void cpu_vao::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
 	{
-		shader.use();
-		shader.setMat4("view_matrix", view_matrix);
-		shader.setMat4("projection_matrix", projection_matrix);
+		boid_shader.use();
+		boid_shader.setMat4("view_matrix", view_matrix);
+		boid_shader.setMat4("projection_matrix", projection_matrix);
 
 		glBindVertexArray(vao);
 		glDrawArrays(GL_POINTS, 0, positions.size());

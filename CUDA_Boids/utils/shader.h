@@ -61,60 +61,10 @@ namespace utils::graphics::opengl
 			if (geomPath) { glDeleteShader(geometryShader); }
 		}	
 
-		~Shader() { glDeleteProgram(program); }
+		// this is necessary since we dont want to delete the program involuntarily after a move (which would call the destructor)
+		void del() const noexcept { glDeleteProgram(program); }
 
 		void use() const noexcept { glUseProgram(program); }
-
-		std::vector<std::string> findSubroutines(GLenum shaderType)
-		{
-			std::vector<std::string> ret;
-
-			int maxSub = 0, maxSubU = 0, countActiveSU = 0;
-			GLchar name[256];
-			int len = 0, numCompS = 0;
-
-			// global parameters about the Subroutines parameters of the system
-			glGetIntegerv(GL_MAX_SUBROUTINES, &maxSub);
-			glGetIntegerv(GL_MAX_SUBROUTINE_UNIFORM_LOCATIONS, &maxSubU);
-			std::cout << "Max Subroutines:" << maxSub << " - Max Subroutine Uniforms:" << maxSubU << std::endl;
-
-			// get the number of Subroutine uniforms for the kind of shader used
-			glGetProgramStageiv(program, shaderType, GL_ACTIVE_SUBROUTINE_UNIFORMS, &countActiveSU);
-
-			// print info for every Subroutine uniform
-			for (int i = 0; i < countActiveSU; i++) {
-
-				// get the name of the Subroutine uniform (in this example, we have only one)
-				glGetActiveSubroutineUniformName(program, shaderType, i, 256, &len, name);
-				// print index and name of the Subroutine uniform
-				std::cout << "Subroutine Uniform: " << i << " - name: " << name << std::endl;
-
-				// get the number of subroutines
-				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_NUM_COMPATIBLE_SUBROUTINES, &numCompS);
-
-				// get the indices of the active subroutines info and write into the array s
-				int* s = new int[numCompS];
-				glGetActiveSubroutineUniformiv(program, shaderType, i, GL_COMPATIBLE_SUBROUTINES, s);
-				std::cout << "Compatible Subroutines:" << std::endl;
-
-				// for each index, get the name of the subroutines, print info, and save the name in the shaders vector
-				for (int j = 0; j < numCompS; ++j) {
-					glGetActiveSubroutineName(program, shaderType, s[j], 256, &len, name);
-					std::cout << "\t" << s[j] << " - " << name << "\n";
-					ret.push_back(name);
-				}
-				std::cout << std::endl;
-
-				delete[] s;
-			}
-
-			return ret;
-		}
-
-		GLuint getSubroutineIndex(GLenum shaderType, const char* subroutineName)
-		{
-			return glGetSubroutineIndex(program, shaderType, subroutineName);
-		}
 
 #pragma region utility_uniform_functions
 		void setBool (const std::string& name, bool value)                            const { glUniform1i (glGetUniformLocation(program, name.c_str()), (int)value); }

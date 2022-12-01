@@ -1,17 +1,13 @@
 #pragma once
 #include "boid_runner.h"
 
-#include "../utils/shader.h"
-#include "../utils/mesh.h"
-#include "../utils/flock.h"
-
 namespace utils::runners
 {
 	class vao_runner : public boid_runner
 	{
 	protected:
-		vao_runner(){}
-		vao_runner(simulation_parameters params) : boid_runner{ params } {}
+		vao_runner(utils::graphics::opengl::Shader&& boid_shader, simulation_parameters params = {}) : 
+			boid_runner{ std::move(boid_shader), params } {}
 
 		inline void setup_vbo(GLuint& vbo, size_t element_size, size_t element_amount, int bind_index, void* data)
 		{

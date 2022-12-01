@@ -5,6 +5,7 @@
 #include <random>
 
 #include <glm/glm.hpp>
+
 #include "CUDA/vector_math.h"
 
 namespace utils
@@ -18,65 +19,66 @@ namespace utils
 	{
 		struct plane
 		{
-			glm::vec4 origin;
-			glm::vec4 normal;
+			float4 origin;
+			float4 normal;
 		};
 
-		inline glm::vec4 normalize(glm::vec4 vec)
+		inline __host__ __device__ int floor(const int x, const int y)
 		{
-			glm::vec4 zero{ 0 };
-			if (vec != zero)
-				return glm::normalize(vec);
-			else
-				return zero;
+			return x / y;
 		}
 
-		inline float distance_point_plane(glm::vec4 point, plane plane)
+		inline __host__ __device__ int ceil(const int x, const int y)
 		{
-			return glm::dot(plane.normal, point - plane.origin);
+			return static_cast<int>(::ceil(static_cast<double>(x) / y));
+		}
+
+		inline __host__ __device__ float length2(const float4 a)
+		{
+			return dot(a, a);
+		}
+
+		inline __host__ __device__ float distance2(const float4 a, const float4 b)
+		{
+			float4 diff = a - b;
+			return length2(diff);
+		}
+
+		inline __host__ __device__ bool operator==(const float4 a, const float4 b)
+		{
+			return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+		}
+
+		inline __host__ __device__ bool operator!=(const float4 a, const float4 b)
+		{
+			return !operator==(a, b);
+		}
+
+		inline __host__ __device__ float4 normalize_or_zero_div(const float4 vec)
+		{
+			float4 zero{ 0 };
+			if (vec == zero)
+				return zero;
+			else
+				return normalize(vec);
+		}
+
+		inline __host__ __device__ float4 normalize_or_zero(const float4 vec)
+		{
+			float4 zero{ 0 }, normalized = normalize(vec);
+			float4 result[] = { zero, normalized };
+			int is_valid = vec != zero;
+			return result[is_valid]; // has to be 0 or 1, branchless
+		}
+
+		inline __host__ __device__ float distance_point_plane(const float4 point, const plane plane)
+		{
+			return dot(plane.normal, point - plane.origin);
+		}
+
+		inline __host__ __device__ void print_f4(const float4 f4)
+		{
+			printf("%.2f %.2f %.2f %.2f \n", f4.x, f4.y, f4.z, f4.w);
 		}
 	}	
-
-	namespace containers
-	{
-		inline void random_vec2_fill_cpu(std::vector<glm::vec2>& arr, const int range_from, const int range_to)
-		{
-			std::random_device                     rand_dev;
-			std::mt19937                           generator(rand_dev());
-			std::uniform_real_distribution<float>  distr(range_from, range_to);
-
-			for (size_t i = 0; i < arr.size(); i++)
-			{
-				arr[i][0] = distr(generator);
-				arr[i][1] = distr(generator);
-			}
-		}
-		inline void random_vec3_fill_cpu(std::vector<glm::vec3>& arr, const int range_from, const int range_to)
-		{
-			std::random_device                     rand_dev;
-			std::mt19937                           generator(rand_dev());
-			std::uniform_real_distribution<float>  distr(range_from, range_to);
-
-			for (size_t i = 0; i < arr.size(); i++)
-			{
-				arr[i][0] = distr(generator);
-				arr[i][1] = distr(generator);
-				arr[i][2] = distr(generator);
-			}
-		}
-		inline void random_vec4_fill_cpu(std::vector<glm::vec4>& arr, const int range_from, const int range_to)
-		{
-			std::random_device                     rand_dev;
-			std::mt19937                           generator(rand_dev());
-			std::uniform_real_distribution<float>  distr(range_from, range_to);
-
-			for (size_t i = 0; i < arr.size(); i++)
-			{
-				arr[i][0] = distr(generator);
-				arr[i][1] = distr(generator);
-				arr[i][2] = distr(generator);
-				arr[i][3] = 0;
-			}
-		}
-	}
 }

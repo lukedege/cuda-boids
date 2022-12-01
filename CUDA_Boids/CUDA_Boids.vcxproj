@@ -114,10 +114,8 @@
     <ClInclude Include="runners\vao_runner.h" />
     <ClInclude Include="utils\camera.h" />
     <ClInclude Include="utils\CUDA\cudaGLmanager.h" />
-    <ClInclude Include="utils\CUDA\cuda_utils.cuh" />
+    <CudaCompile Include="utils\CUDA\cuda_utils.h" />
     <ClInclude Include="utils\CUDA\vector_math.h" />
-    <ClInclude Include="utils\entity.h" />
-    <ClInclude Include="utils\flock.h" />
     <ClInclude Include="utils\mesh.h" />
     <ClInclude Include="utils\shader.h" />
     <ClInclude Include="utils\utils.h" />
@@ -125,9 +123,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
-    <ClCompile Include="Main.cpp" />
+    <CudaCompile Include="Main.cpp" />
     <CudaCompile Include="quick_tests.cpp" />
-    <ClCompile Include="runners\cpu_ssbo.cpp" />
+    <CudaCompile Include="runners\cpu_ssbo.cpp" />
     <ClCompile Include="runners\cpu_vao.cpp" />
     <CudaCompile Include="runners\gpu_vao.cpp" />
     <CudaCompile Include="runners\gpu_ssbo.cpp" />

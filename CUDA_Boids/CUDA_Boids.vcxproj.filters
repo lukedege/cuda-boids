@@ -54,25 +54,13 @@
     <ClInclude Include="utils\window.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\flock.h">
-      <Filter>Headers\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\mesh.h">
-      <Filter>Headers\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\shader.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\camera.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\entity.h">
-      <Filter>Headers\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\CUDA\cudaGLmanager.h">
-      <Filter>Headers\utils\CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\CUDA\cuda_utils.cuh">
       <Filter>Headers\utils\CUDA</Filter>
     </ClInclude>
     <ClInclude Include="utils\CUDA\vector_math.h">
@@ -105,6 +93,9 @@
     <ClInclude Include="runners\boid_behaviours.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
+    <ClInclude Include="utils\shader.h">
+      <Filter>Headers\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="old_main2.cpp">
@@ -122,16 +113,19 @@
     <CudaCompile Include="quick_tests.cpp">
       <Filter>Sources</Filter>
     </CudaCompile>
+    <CudaCompile Include="utils\CUDA\cuda_utils.h">
+      <Filter>Headers\utils\CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Main.cpp">
+      <Filter>Sources</Filter>
+    </CudaCompile>
+    <CudaCompile Include="runners\cpu_ssbo.cpp">
+      <Filter>Sources\Runners\ssbo_runners</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c">
       <Filter>Sources\Libraries</Filter>
-    </ClCompile>
-    <ClCompile Include="Main.cpp">
-      <Filter>Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="runners\cpu_ssbo.cpp">
-      <Filter>Sources\Runners\ssbo_runners</Filter>
     </ClCompile>
     <ClCompile Include="runners\cpu_vao.cpp">
       <Filter>Sources\Runners\vao_runners</Filter>

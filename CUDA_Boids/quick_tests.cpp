@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <cuda_runtime.h>
-#include "utils/CUDA/cuda_utils.cuh"
+#include "utils/CUDA/cuda_utils.h"
 #include "utils/CUDA/vector_math.h"
 
 #include "utils/shader.h"
@@ -11,13 +11,13 @@
 
 #include "utils/utils.h"
 
-namespace ugo = utils::graphics::opengl;
+namespace ugl = utils::graphics::opengl;
 
 void opengl_main()
 {
-	ugo::window wdw
+	ugl::window wdw
 	{
-		ugo::window::window_create_info
+		ugl::window::window_create_info
 		{
 			{ "Prova" }, //.title
 			{ 4       }, //.gl_version_major
@@ -79,7 +79,7 @@ void opengl_main()
 
 	shader.use();
 
-	ugo::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
+	ugl::Camera camera{ glm::vec3(0, 0, 50), GL_TRUE };
 	glm::mat4 projection_matrix = glm::perspective(45.0f, (float)window_size.first / (float)window_size.second, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
 
@@ -118,7 +118,7 @@ void opengl_main()
 void plane_test()
 {
 	float cube_size = 10;
-	glm::vec4 boid = { -1,3,9,0 };
+	float4 boid = { -1,3,9,0 };
 	utils::math::plane zp{ { 0,0, cube_size,0 }, { 0,0,-1,0 } };
 	utils::math::plane zm{ { 0,0,-cube_size,0 }, { 0,0, 1,0 } };
 	utils::math::plane xp{ {  cube_size,0,0,0 }, { -1,0,0,0 } };
@@ -135,41 +135,46 @@ void plane_test()
 	}
 }
 
-__device__ int simple2(int a, int b)
+namespace
 {
-	return a + b;
-}
+	__device__ int simple2(int a, int b)
+	{
+		return a + b;
+	}
 
-inline __host__ __device__ bool operator==(float4 a, float4 b)
-{
-	return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
+	inline __host__ __device__ bool operator==(float4 a, float4 b)
+	{
+		return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+	}
 
-inline __host__ __device__ bool operator!=(float4 a, float4 b)
-{
-	return !operator==(a,b);
-}
+	inline __host__ __device__ bool operator!=(float4 a, float4 b)
+	{
+		return !operator==(a, b);
+	}
 
-inline __host__ __device__ float4 normalize_or_zero(float4 vec)
-{
-	float4 zero{ 0 }, normalized = normalize(vec);
-	float4 result[] = { zero, normalized };
-	int is_valid = vec != zero;
-	return result[is_valid]; // has to be 0 or 1, branchless
-}
+	inline __host__ __device__ float4 normalize_or_zero(float4 vec)
+	{
+		float4 zero{ 0 }, normalized = normalize(vec);
+		float4 result[] = { zero, normalized };
+		int is_valid = vec != zero;
+		return result[is_valid]; // has to be 0 or 1, branchless
+	}
 
-__global__ void simple()
-{
-	float4 ret{ 0 };
-	ret = normalize_or_zero(ret);
-	printf("ciao %.2f", ret.x);
+	__global__ void simple()
+	{
+		float4 ret{ 0 };
+		ret = normalize_or_zero(ret);
+		printf("ciao %.2f", ret.x);
+	}
 }
-
 
 
 int mainz()
 {	
-	simple CUDA_KERNEL(1, 1)();
-	cudaDeviceSynchronize();
+	size_t size = 10;
+	std::vector<float4> pos(100);
+	utils::cuda::containers::random_vec4_fill_hptr(pos.data(), pos.size(), -5, 5);
+	
+	
 	return 0;
 }

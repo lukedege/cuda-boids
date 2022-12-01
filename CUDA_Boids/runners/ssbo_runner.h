@@ -1,17 +1,16 @@
 #pragma once
 #include "boid_runner.h"
 
-#include "../utils/shader.h"
-#include "../utils/mesh.h"
-#include "../utils/flock.h"
-
 namespace utils::runners
 {
 	class ssbo_runner : public boid_runner
 	{
 	protected:
-		ssbo_runner(){}
-		ssbo_runner(simulation_parameters params) : boid_runner{params}{}
+		ssbo_runner(utils::graphics::opengl::Shader&& boid_shader, simulation_parameters params = {}) :
+			boid_runner  { std::move(boid_shader), params},
+			triangle_mesh{ setup_mesh() },
+			ssbo_positions {0},
+			ssbo_velocities{0} {}
 
 		inline utils::graphics::opengl::Mesh setup_mesh()
 		{
@@ -25,5 +24,9 @@ namespace utils::runners
 			return utils::graphics::opengl::Mesh(vertices, indices);
 		}
 
+		utils::graphics::opengl::Mesh triangle_mesh;
+
+		GLuint ssbo_positions; 
+		GLuint ssbo_velocities;
 	};
 }

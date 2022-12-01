@@ -4,7 +4,7 @@
 
 #include <cuda_gl_interop.h>
 
-#include "cuda_utils.cuh"
+#include "cuda_utils.h"
 
 namespace utils::cuda
 {
@@ -16,14 +16,14 @@ namespace utils::cuda
 		{
 			// register this buffer object with CUDA
 			cudaGraphicsResource* new_resource;
-			checks::check_cuda_result(cudaGraphicsGLRegisterBuffer(&new_resource, buffer_object, flags));
+			checks::cuda(cudaGraphicsGLRegisterBuffer(&new_resource, buffer_object, flags));
 
 			// map OpenGL buffer object for writing from CUDA
 			void* device_ptr;
-			checks::check_cuda_result(cudaGraphicsMapResources(1, &new_resource, 0));
+			checks::cuda(cudaGraphicsMapResources(1, &new_resource, 0));
 			size_t num_bytes;
 
-			checks::check_cuda_result(cudaGraphicsResourceGetMappedPointer(&device_ptr, &num_bytes, new_resource));
+			checks::cuda(cudaGraphicsResourceGetMappedPointer(&device_ptr, &num_bytes, new_resource));
 			std::cout << "Successfully CUDA mapped buffer: May access " << num_bytes << " bytes\n";
 
 			resources.push_back(new_resource);
@@ -33,10 +33,10 @@ namespace utils::cuda
 
 		~gl_manager()
 		{
-			checks::check_cuda_result(cudaGraphicsUnmapResources(resources.size(), resources.data()));
+			checks::cuda(cudaGraphicsUnmapResources(resources.size(), resources.data()));
 			for (auto res_ptr : resources)
 			{
-				checks::check_cuda_result(cudaGraphicsUnregisterResource(res_ptr));
+				checks::cuda(cudaGraphicsUnregisterResource(res_ptr));
 			}
 		}
 
