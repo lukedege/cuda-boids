@@ -125,12 +125,6 @@ namespace
 
 }
 
-// 1) crea l'array per la griglia con una certa gridresolution
-// 2) data la loro posizione, affibbia un indice di griglia a ogni boid(indice 3d{ i,j,k } che però può e deve essere linearizzato)
-// 3) ordina l'array di boid secondo la loro posizione di griglia(scattered=ordina solo il boid index, coherent = ordina pure velocities e positions)
-// 4) calcola "start" e "end" di ogni cella della griglia(ovvero il range di indici uguali dei boid adiacenti)
-// 5) calcola le velocità usando solo quella cella come neighborhood(o al peggio checka le 8 adiacenti(? )(da controllare))
-
 namespace utils::runners
 {
 	gpu_ssbo::gpu_ssbo(simulation_parameters params) :
@@ -147,7 +141,8 @@ namespace utils::runners
 		ssbo_positions_dptr  = (float4*)cuda_gl_manager.add_resource(ssbo_positions , cudaGraphicsMapFlagsNone);
 		ssbo_velocities_dptr = (float4*)cuda_gl_manager.add_resource(ssbo_velocities, cudaGraphicsMapFlagsNone);
 
-		utils::cuda::containers::random_vec4_fill_dptr(ssbo_positions_dptr, amount, -sim_params.cube_size, sim_params.cube_size);
+		float spawn_range = sim_params.cube_size * 0.5f;
+		utils::cuda::containers::random_vec4_fill_dptr(ssbo_positions_dptr, amount, -spawn_range, spawn_range);
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_velocities_dptr, amount, -1, 1);
 
 		// manual transfers are sufficient since transfers on these variables are occasional and one-sided only (CPU->GPU)

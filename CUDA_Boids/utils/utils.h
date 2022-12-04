@@ -76,6 +76,13 @@ namespace utils
 			return dot(plane.normal, point - plane.origin);
 		}
 
+		inline __host__ __device__ float normalized_value_in_range(float val, float min, float max)
+		{
+			float result[] = { 0, (val - min) / (max - min) };
+			int is_valid = max > min;
+			return result[is_valid];
+		}
+
 		inline __host__ __device__ void print_f4(const float4 f4)
 		{
 			printf("%.2f %.2f %.2f %.2f \n", f4.x, f4.y, f4.z, f4.w);

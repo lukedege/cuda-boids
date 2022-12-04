@@ -32,7 +32,6 @@ void process_keys(ugl::window& window, GLfloat delta_time);
 
 GLfloat mouse_last_x, mouse_last_y, x_offset, y_offset;
 bool left_mouse_pressed;
-
 bool keys[1024];
 
 ugl::orbit_camera camera{ glm::vec3(0, 0, 0), 50.f };
@@ -68,18 +67,18 @@ int main()
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 1000 },//boid_amount
+		{ 10 },//boid_amount
 		{ 5.0f },//boid_speed
 		{ 10.0f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
 		{ 1.0f },//separation_coeff
 		{ 10.0f },//wall_separation_coeff
-		{ 20.f },//cube_size
+		{ 40.f },//cube_size
 	};
 	//utils::runners::boid_runner* runner;
 
-	utils::runners::gpu_ssbo runner{params};
+	utils::runners::cpu_ssbo runner{params};
 	//runner = &spec_runner;
 	
 	// Camera setup

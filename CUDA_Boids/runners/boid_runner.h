@@ -43,20 +43,21 @@ namespace utils::runners
 
 		inline std::array<utils::math::plane, 6> reset_volume()
 		{
+			float val = sim_params.cube_size * 0.5f;
 			return
 			{
-				utils::math::plane{{  sim_params.cube_size,0,0,1 }, { -1,0,0,0 }}, //xp
-				utils::math::plane{{ -sim_params.cube_size,0,0,1 }, {  1,0,0,0 }}, //xm
-				utils::math::plane{{ 0, sim_params.cube_size,0,1 }, { 0,-1,0,0 }}, //yp
-				utils::math::plane{{ 0,-sim_params.cube_size,0,1 }, { 0, 1,0,0 }}, //ym
-				utils::math::plane{{ 0,0, sim_params.cube_size,1 }, { 0,0,-1,0 }}, //zp
-				utils::math::plane{{ 0,0,-sim_params.cube_size,1 }, { 0,0, 1,0 }}, //zm
+				utils::math::plane{{  val,0,0,1 }, { -1,0,0,0 }}, //xp
+				utils::math::plane{{ -val,0,0,1 }, {  1,0,0,0 }}, //xm
+				utils::math::plane{{ 0, val,0,1 }, { 0,-1,0,0 }}, //yp
+				utils::math::plane{{ 0,-val,0,1 }, { 0, 1,0,0 }}, //ym
+				utils::math::plane{{ 0,0, val,1 }, { 0,0,-1,0 }}, //zp
+				utils::math::plane{{ 0,0,-val,1 }, { 0,0, 1,0 }}, //zm
 			};
 		}
 		
 		inline utils::graphics::opengl::Mesh reset_cube_mesh()
 		{
-			float val = sim_params.cube_size;
+			float val = sim_params.cube_size * 0.5f;
 			std::vector<utils::graphics::opengl::Vertex> vertices
 			{
 				{{ -val,  val, -val, }},//0 up   front sx

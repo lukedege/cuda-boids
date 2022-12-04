@@ -20,7 +20,8 @@ namespace utils::runners
 		positions { std::vector<float4>(amount) },
 		velocities{ std::vector<float4>(amount) }
 	{
-		utils::cuda::containers::random_vec4_fill_hptr(positions.data(), amount, -sim_params.cube_size, sim_params.cube_size);
+		float spawn_range = sim_params.cube_size * 0.5f;
+		utils::cuda::containers::random_vec4_fill_hptr(positions.data(), amount, -spawn_range, spawn_range);
 		utils::cuda::containers::random_vec4_fill_hptr(velocities.data(), amount, -1, 1);
 
 		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 0, positions.data());
@@ -48,9 +49,34 @@ namespace utils::runners
 		update_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, 0, sizeof(float4), amount, velocities.data());
 	}
 
+	void cpu_ssbo::uniform_grid_calculation(const float delta_time)
+	{
+		// 1) crea l'array per la griglia con una certa gridresolution (number of cells per line)
+		float grid_resolution = 2.f; // TODO move grid_resolution or cell_size to simulation_parameters
+		float cell_size = sim_params.cube_size/grid_resolution;
+		float cube_half_size = sim_params.cube_size / 2;
+		std::vector<int> boid_cell_indices(amount);
+		// 2) data la loro posizione, affibbia un indice di griglia a ogni boid(indice 3d{ i,j,k } che però può e deve essere linearizzato)
+		int x, y, z, linear_index;
+		for (size_t i = 0; i < amount; i++)
+		{
+			x = utils::math::normalized_value_in_range(positions[i].x, -cube_half_size, cube_half_size) * grid_resolution;
+			y = utils::math::normalized_value_in_range(positions[i].y, -cube_half_size, cube_half_size) * grid_resolution;
+			z = utils::math::normalized_value_in_range(positions[i].z, -cube_half_size, cube_half_size) * grid_resolution;
+			linear_index = x * grid_resolution * grid_resolution + y * grid_resolution + z;
+			boid_cell_indices[i] = linear_index;
+		}
+		// 3) ordina l'array di boid secondo la loro posizione di griglia(scattered=ordina solo il boid index, coherent = ordina pure velocities e positions)
+		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), [](int a, int b) -> bool {return a < b; });
+		// 4) calcola "start" e "end" di ogni cella della griglia(ovvero il range di indici uguali dei boid adiacenti)
+		
+		// 5) calcola le velocità usando solo quella cella come neighborhood(o al peggio checka le 8 adiacenti(? )(da controllare))
+	}
+
 	void cpu_ssbo::calculate(const float delta_time)
 	{
-		naive_calculation(delta_time);
+		//naive_calculation(delta_time);
+		uniform_grid_calculation(delta_time);
 	}
 
 	void cpu_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)

@@ -17,6 +17,7 @@ namespace utils::runners
 
 	private:
 		void naive_calculation(const float delta_time);
+		void uniform_grid_calculation(const float delta_time);
 
 		size_t amount; //TODO possibly redundant but comfy to avoid writing params.boid_amount bla bla
 		std::vector<float4> positions; 
