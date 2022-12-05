@@ -14,7 +14,7 @@ namespace utils::runners
 	public:
 		struct simulation_parameters
 		{
-			size_t boid_amount          { 50 };
+			size_t boid_amount          {  10  }; // TODO split params in dynamic (coeffs, speed...) and static (amount, cubesize...)
 			float  boid_speed           { 3.0f };
 			float  boid_fov             { 10.f };
 			float  alignment_coeff      { 1.0f };

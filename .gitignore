@@ -1,7 +1,7 @@
 ## CUSTOM BEG ##
 log.txt
 vulkan_log.txt
-
+*.ini
 ## CUSTOM END ##
 
 ## Ignore Visual Studio temporary files, build results, and

@@ -89,15 +89,12 @@ namespace
 		float distance;
 		float near_wall;
 		// wall check
-		for (size_t i = 0; i < amount; i++)
+		for (size_t b = 0; b < 6; b++)
 		{
-			for (size_t b = 0; b < 6; b++)
-			{
-				distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-				near_wall = distance < 1.f;
-				repulsion = (borders[b].normal / abs(distance)) * near_wall;
-				separation += repulsion;
-			}
+			distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
+			near_wall = distance < 1.f;
+			repulsion = (borders[b].normal / abs(distance)) * near_wall;
+			separation += repulsion;
 		}
 
 		wall_separations[current] = utils::math::normalize_or_zero(separation);
@@ -110,7 +107,7 @@ namespace
 		int i = blockIdx.x * blockDim.x + threadIdx.x;
 		if (i >= amount) return;
 		
-		float cs = simulation_params->cube_size;
+		float chs = simulation_params->cube_size / 2;
 		float4 accel_blend;
 
 		accel_blend = simulation_params->alignment_coeff * alignments[i]
@@ -120,7 +117,7 @@ namespace
 
 		ssbo_velocities[i] = utils::math::normalize_or_zero(ssbo_velocities[i] + accel_blend * delta_time); //v = u + at
 		ssbo_positions[i] += ssbo_velocities[i] * simulation_params->boid_speed * delta_time; //s = vt
-		ssbo_positions[i] = clamp(ssbo_positions[i], { -cs,-cs,-cs,0 }, { cs,cs,cs,0 }); // ensures boids remain into the cube
+		ssbo_positions[i] = clamp(ssbo_positions[i], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
 	}
 
 }
@@ -129,7 +126,7 @@ namespace utils::runners
 {
 	gpu_ssbo::gpu_ssbo(simulation_parameters params) :
 		ssbo_runner{ {"shaders/ssbo.vert", "shaders/basic.frag"}, params },
-		amount{ sim_params.boid_amount },
+		amount{ params.boid_amount },
 		ssbo_positions_dptr{ nullptr },
 		ssbo_velocities_dptr{ nullptr },
 		block_size{ 128 },

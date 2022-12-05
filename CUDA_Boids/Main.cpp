@@ -12,6 +12,10 @@
 #include <glfw/glfw3.h>
 #include <glm/glm.hpp>
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+
 // utils libraries
 #include "utils/window.h"
 #include "utils/orbit_camera.h"
@@ -64,21 +68,28 @@ int main()
 	glfwSetMouseButtonCallback(glfw_window, mouse_button_callback);
 	glfwSetScrollCallback(glfw_window, mouse_scroll_callback);
 	
+	// Imgui setup
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
+	ImGui_ImplOpenGL3_Init("#version 430");
+
 	// Runner setup
-	utils::runners::boid_runner::simulation_parameters params
+	utils::runners::boid_runner::simulation_parameters params // TODO SPLIT DYNAMIC PARAMETERS (coefficients, speed) FROM STATIC PARAMETERS (cube_size, amount...)
 	{
-		{ 10 },//boid_amount
+		{ 100  },//boid_amount
 		{ 5.0f },//boid_speed
-		{ 10.0f },//boid_fov
+		{ 2.0f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
 		{ 1.0f },//separation_coeff
-		{ 10.0f },//wall_separation_coeff
+		{ 3.0f },//wall_separation_coeff
 		{ 40.f },//cube_size
 	};
 	//utils::runners::boid_runner* runner;
-
-	utils::runners::cpu_ssbo runner{params};
+	utils::runners::cpu_ssbo runner{ params };
 	//runner = &spec_runner;
 	
 	// Camera setup
@@ -91,6 +102,7 @@ int main()
 	GLfloat avg_calc = 1.f, avg_fps = 1.f;
 	GLfloat alpha = 0.9;
 	std::cout << std::setprecision(4) << std::fixed;
+	float test;
 	while (wdw.is_open())
 	{
 		// we determine the time passed from the beginning
@@ -98,6 +110,11 @@ int main()
 		GLfloat currentFrame = glfwGetTime();
 		delta_time = currentFrame - last_frame;
 		last_frame = currentFrame;
+
+		// Tell OpenGL a new frame is about to begin
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
 		glfwPollEvents();
 		process_keys(wdw, delta_time);
@@ -122,11 +139,32 @@ int main()
 		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
 		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
 
+		// ImGUI window creation
+		ImGui::Begin("Boid settings");
+		ImGui::SliderFloat("Boid Speed"     , &params.boid_speed           , 0, 10);
+		ImGui::SliderFloat("Alignment"      , &params.alignment_coeff      , 0, 5);
+		ImGui::SliderFloat("Cohesion"       , &params.cohesion_coeff       , 0, 5);
+		ImGui::SliderFloat("Separation"     , &params.separation_coeff     , 0, 5);
+		ImGui::SliderFloat("Wall Separation", &params.wall_separation_coeff, 0, 20);
+		// Ends the window
+		ImGui::End();
+
+		// Renders the ImGUI elements
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+		// Update parameters changed through imgui TODO make it work with gpu_ssbo
+		runner.set_simulation_parameters(params);
+
 		glfwSwapBuffers(glfw_window);
 	}
 	std::cout << "-----------------------------------\n";
 	std::cout << "Average FPS  : " << avg_fps << "\n";
 	std::cout << "Average calcs: " << avg_calc << "ms \n";
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	return 0;
 }
@@ -147,17 +185,22 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mode)
 {
-	left_mouse_pressed  = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
+	ImGuiIO& io = ImGui::GetIO();
+	io.AddMouseButtonEvent(button, GLFW_PRESS);
+
+	if(!io.WantCaptureMouse)
+		left_mouse_pressed  = (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS);
 }
 
-void mouse_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-	float fwidth = static_cast<float>(width), fheight = static_cast<float>(height);
-	float phi = camera.get_phi(), theta = camera.get_theta();
-
+void mouse_pos_callback(GLFWwindow* window, double xpos, double ypos) 
+{
 	if (left_mouse_pressed) 
 	{
+		int width, height;
+		glfwGetWindowSize(window, &width, &height);
+		float fwidth = static_cast<float>(width), fheight = static_cast<float>(height);
+		float phi = camera.get_phi(), theta = camera.get_theta();
+
 		// compute new camera parameters with polar (spherical) coordinates
 		phi   += (xpos - mouse_last_x) / fwidth ;
 		theta -= (ypos - mouse_last_y) / fheight;
@@ -173,6 +216,6 @@ void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	float zoom = camera.get_distance();
 	zoom -= yoffset;
-	zoom = std::clamp(zoom, 0.1f, 100.0f);
+	zoom = std::clamp(zoom, 0.1f, 1000.0f);
 	camera.update_distance(zoom);
 }

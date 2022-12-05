@@ -62,18 +62,83 @@ namespace utils::runners::behaviours::cpu::naive
 		float distance;
 		float near_wall;
 		// wall check
-		for (size_t i = 0; i < amount; i++)
+		for (size_t b = 0; b < 6; b++)
 		{
-			for (size_t b = 0; b < 6; b++)
-			{
-				distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-				near_wall = distance < 1.f;
-				repulsion = (borders[b].normal / abs(distance)) * near_wall;
-				separation += repulsion;
-			}
+			distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
+			near_wall = distance < 1.f;
+			repulsion = (borders[b].normal / abs(distance)) * near_wall;
+			separation += repulsion;
 		}
+		
 
 		return utils::math::normalize_or_zero(separation);
 	}
 }
 
+namespace utils::runners::behaviours::cpu::uniform_grid
+{
+	struct boid_cell_index
+		{
+			int boid_id;
+			int cell_id;
+		};
+
+	inline float4 alignment(size_t current, float4* positions, float4* velocities, boid_cell_index* boid_cell_indices, int start, int end)
+	{
+		float4 alignment{ 0 };
+		int current_neighbour;
+		for (size_t i = start; i < end; i++)
+		{
+			current_neighbour = boid_cell_indices[i].boid_id;
+			alignment += velocities[current_neighbour];
+		}
+		return utils::math::normalize_or_zero(alignment);
+	}
+
+	inline float4 cohesion(size_t current, float4* positions, boid_cell_index* boid_cell_indices, int start, int end)
+	{
+		float4 cohesion{ 0 }, baricenter{ 0 };
+		float counter{ 0 };
+		int current_neighbour;
+		for (size_t i = start; i < end; i++)
+		{
+			current_neighbour = boid_cell_indices[i].boid_id;
+			baricenter += positions[i];
+			counter += 1.f;
+		}
+		baricenter /= counter;
+		cohesion = baricenter - positions[current];
+		return utils::math::normalize_or_zero(cohesion);
+	}
+
+	inline float4 separation(size_t current, float4* positions, boid_cell_index* boid_cell_indices, int start, int end)
+	{
+		float4 separation{ 0 };
+		float4 repulsion;
+		int current_neighbour;
+		for (size_t i = start; i < end; i++)
+		{
+			current_neighbour = boid_cell_indices[i].boid_id;
+			repulsion = positions[current] - positions[current_neighbour];
+			separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f));
+		}
+		return utils::math::normalize_or_zero(separation);
+	}
+
+	inline float4 wall_separation(size_t current, float4* positions, utils::math::plane* borders)
+	{
+		float4 separation{ 0 };
+		float4 repulsion;
+		float distance;
+		float near_wall;
+		for (size_t b = 0; b < 6; b++)
+		{
+			distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
+			near_wall = distance < 1.f;
+			repulsion = (borders[b].normal / abs(distance)) * near_wall;
+			separation += repulsion;
+		}
+		
+		return utils::math::normalize_or_zero(separation);
+	}
+}

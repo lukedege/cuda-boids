@@ -49,6 +49,9 @@
     <Filter Include="Sources\Runners\vao_runners">
       <UniqueIdentifier>{1baf4d36-49d1-4f2b-b192-4aa0b1e7c10d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sources\Libraries\imgui">
+      <UniqueIdentifier>{d02bb1a4-2f74-45da-8608-4a93d637ac97}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\window.h">
@@ -132,6 +135,24 @@
     </ClCompile>
     <ClCompile Include="runners\cpu_vao.cpp">
       <Filter>Sources\Runners\vao_runners</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\Libraries\imgui-1.88\imgui.cpp">
+      <Filter>Sources\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\Libraries\imgui-1.88\imgui_draw.cpp">
+      <Filter>Sources\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp">
+      <Filter>Sources\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp">
+      <Filter>Sources\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\Libraries\imgui-1.88\imgui_tables.cpp">
+      <Filter>Sources\Libraries\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="F:\Libraries\imgui-1.88\imgui_widgets.cpp">
+      <Filter>Sources\Libraries\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
