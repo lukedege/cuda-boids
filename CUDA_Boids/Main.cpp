@@ -79,13 +79,13 @@ int main()
 	// Runner setup
 	utils::runners::boid_runner::simulation_parameters params // TODO SPLIT DYNAMIC PARAMETERS (coefficients, speed) FROM STATIC PARAMETERS (cube_size, amount...)
 	{
-		{ 100  },//boid_amount
+		{ 1000  },//boid_amount
 		{ 5.0f },//boid_speed
-		{ 2.0f },//boid_fov
+		{ 4.0f },//boid_fov
 		{ 1.0f },//alignment_coeff
 		{ 0.8f },//cohesion_coeff
 		{ 1.0f },//separation_coeff
-		{ 3.0f },//wall_separation_coeff
+		{ 10.0f },//wall_separation_coeff
 		{ 40.f },//cube_size
 	};
 	//utils::runners::boid_runner* runner;

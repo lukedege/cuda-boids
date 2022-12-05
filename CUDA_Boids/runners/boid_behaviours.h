@@ -83,44 +83,55 @@ namespace utils::runners::behaviours::cpu::uniform_grid
 			int cell_id;
 		};
 
-	inline float4 alignment(size_t current, float4* positions, float4* velocities, boid_cell_index* boid_cell_indices, int start, int end)
+	inline float4 alignment(size_t current, float4* positions, float4* velocities, boid_cell_index* boid_cell_indices, int start, int end, size_t max_radius)
 	{
 		float4 alignment{ 0 };
 		int current_neighbour;
+		float in_radius;
 		for (size_t i = start; i < end; i++)
 		{
 			current_neighbour = boid_cell_indices[i].boid_id;
-			alignment += velocities[current_neighbour];
+			in_radius = utils::math::distance2(positions[current], positions[current_neighbour]) < max_radius* max_radius;
+			if (in_radius)
+				alignment += velocities[current_neighbour];
 		}
 		return utils::math::normalize_or_zero(alignment);
 	}
 
-	inline float4 cohesion(size_t current, float4* positions, boid_cell_index* boid_cell_indices, int start, int end)
+	inline float4 cohesion(size_t current, float4* positions, boid_cell_index* boid_cell_indices, int start, int end, size_t max_radius)
 	{
 		float4 cohesion{ 0 }, baricenter{ 0 };
 		float counter{ 0 };
 		int current_neighbour;
+		float in_radius;
 		for (size_t i = start; i < end; i++)
 		{
 			current_neighbour = boid_cell_indices[i].boid_id;
-			baricenter += positions[i];
-			counter += 1.f;
+			in_radius = utils::math::distance2(positions[current], positions[current_neighbour]) < max_radius* max_radius;
+			if (in_radius)
+			{
+				baricenter += positions[current_neighbour];
+				counter += 1.f;
+			}
 		}
 		baricenter /= counter;
 		cohesion = baricenter - positions[current];
 		return utils::math::normalize_or_zero(cohesion);
 	}
 
-	inline float4 separation(size_t current, float4* positions, boid_cell_index* boid_cell_indices, int start, int end)
+	inline float4 separation(size_t current, float4* positions, boid_cell_index* boid_cell_indices, int start, int end, size_t max_radius)
 	{
 		float4 separation{ 0 };
 		float4 repulsion;
 		int current_neighbour;
+		float in_radius;
 		for (size_t i = start; i < end; i++)
 		{
 			current_neighbour = boid_cell_indices[i].boid_id;
 			repulsion = positions[current] - positions[current_neighbour];
-			separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f));
+			in_radius = utils::math::length2(repulsion) < max_radius * max_radius;
+			if (in_radius)
+				separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f));
 		}
 		return utils::math::normalize_or_zero(separation);
 	}

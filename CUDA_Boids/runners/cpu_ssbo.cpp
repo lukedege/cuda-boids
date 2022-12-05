@@ -106,9 +106,9 @@ namespace utils::runners
 		for (size_t i = 0; i < amount; i++)
 		{
 			ug_bhvr::boid_cell_index current = boid_cell_indices[i];
-			accel_blend = sim_params.alignment_coeff       * ug_bhvr::alignment      (current.boid_id, positions.data(), velocities.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end)
-						+ sim_params.cohesion_coeff        * ug_bhvr::cohesion       (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end)
-						+ sim_params.separation_coeff      * ug_bhvr::separation     (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end)
+			accel_blend = sim_params.alignment_coeff       * ug_bhvr::alignment      (current.boid_id, positions.data(), velocities.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, sim_params.boid_fov)
+						+ sim_params.cohesion_coeff        * ug_bhvr::cohesion       (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, sim_params.boid_fov)
+						+ sim_params.separation_coeff      * ug_bhvr::separation     (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, sim_params.boid_fov)
 						+ sim_params.wall_separation_coeff * ug_bhvr::wall_separation(current.boid_id, positions.data(), sim_volume.data());
 
 			velocities[current.boid_id] = utils::math::normalize_or_zero(velocities[current.boid_id] + accel_blend * delta_time); //v = u + at
