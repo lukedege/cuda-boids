@@ -15,118 +15,13 @@
 #include "../utils/CUDA/vector_math.h"
 #include "../utils/CUDA/cuda_utils.h"
 #include "../utils/utils.h"
-#include "boid_behaviours.h"
-
-namespace
-{	
-	__global__ void alignment      (float4* alignments     , float4* positions, float4* velocities, size_t amount, utils::runners::boid_runner::simulation_parameters* sim_params)
-	{
-		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current >= amount) return; // avoid threads ids overflowing the array
-		
-		size_t max_radius = sim_params->boid_fov;// maybe passing the whole simparams is not that cool, maybe passing by value is just fine (we just need the fov)			
-		float4 alignment{ 0 };
-		bool in_radius;
-		for (size_t i = 0; i < amount; i++)
-		{
-			// condition as multiplier avoids warp divergence
-			in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			alignment += velocities[i] * in_radius;
-		}
-
-		alignments[current] = utils::math::normalize_or_zero(alignment);
-		
-	}
-	__global__ void cohesion       (float4* cohesions      , float4* positions, size_t amount, utils::runners::boid_runner::simulation_parameters* sim_params)
-	{
-		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current >= amount) return;
-		
-		size_t max_radius = sim_params->boid_fov;
-		float4 cohesion{ 0 }, baricenter{ 0 };
-		float counter{ 0 };
-		bool in_radius;
-		for (size_t i = 0; i < amount; i++)
-		{
-			in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
-			
-			baricenter += positions[i] * in_radius;
-			counter += 1.f * in_radius;
-		}
-		baricenter /= counter;
-		cohesion = baricenter - positions[current];
-		cohesions[current] = utils::math::normalize_or_zero(cohesion);
-		
-	}
-	__global__ void separation     (float4* separations    , float4* positions, size_t amount, utils::runners::boid_runner::simulation_parameters* sim_params)
-	{
-		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current >= amount) return;
-
-		size_t max_radius = sim_params->boid_fov;
-		float4 separation{ 0 };
-		float4 repulsion;
-		bool in_radius;
-
-		// boid check
-		for (size_t i = 0; i < amount; i++)
-		{
-			repulsion = positions[current] - positions[i];
-			in_radius = utils::math::length2(repulsion) < max_radius * max_radius;
-			separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f)) * in_radius; //TODO may be more optimizable but we'll see
-		}
-
-		separations[current] = utils::math::normalize_or_zero(separation);
-	}
-	__global__ void wall_separation(float4* wall_separations, float4* positions, utils::math::plane* borders, size_t amount)
-	{
-		int current = blockIdx.x * blockDim.x + threadIdx.x;
-		if (current >= amount) return;
-		
-		float4 separation{ 0 };
-		float4 repulsion;
-		float4 plane_normal;
-		float distance;
-		float near_wall;
-		// wall check
-		for (size_t b = 0; b < 6; b++)
-		{
-			distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-			near_wall = distance < 1.f;
-			repulsion = (borders[b].normal / abs(distance)) * near_wall;
-			separation += repulsion;
-		}
-
-		wall_separations[current] = utils::math::normalize_or_zero(separation);
-	}
-
-	__global__ void blender(float4* ssbo_positions, float4* ssbo_velocities, 
-		float4* alignments, float4* cohesions, float4* separations, float4* wall_separations,
-		utils::runners::boid_runner::simulation_parameters* simulation_params, size_t amount, const float delta_time)
-	{
-		int i = blockIdx.x * blockDim.x + threadIdx.x;
-		if (i >= amount) return;
-		
-		float chs = simulation_params->cube_size / 2;
-		float4 accel_blend;
-
-		accel_blend = simulation_params->alignment_coeff * alignments[i]
-			+ simulation_params->cohesion_coeff * cohesions[i]
-			+ simulation_params->separation_coeff * separations[i]
-			+ simulation_params->wall_separation_coeff * wall_separations[i];
-
-		ssbo_velocities[i] = utils::math::normalize_or_zero(ssbo_velocities[i] + accel_blend * delta_time); //v = u + at
-		ssbo_positions[i] += ssbo_velocities[i] * simulation_params->boid_speed * delta_time; //s = vt
-		ssbo_positions[i] = clamp(ssbo_positions[i], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
-	}
-
-}
+#include "gpu_boid_behaviours.h"
 
 namespace utils::runners
 {
 	gpu_ssbo::gpu_ssbo(simulation_parameters params) :
 		ssbo_runner{ {"shaders/ssbo.vert", "shaders/basic.frag"}, params },
-		amount{ params.boid_amount },
+		amount{ params.static_params.boid_amount },
 		ssbo_positions_dptr{ nullptr },
 		ssbo_velocities_dptr{ nullptr },
 		block_size{ 128 },
@@ -138,7 +33,7 @@ namespace utils::runners
 		ssbo_positions_dptr  = (float4*)cuda_gl_manager.add_resource(ssbo_positions , cudaGraphicsMapFlagsNone);
 		ssbo_velocities_dptr = (float4*)cuda_gl_manager.add_resource(ssbo_velocities, cudaGraphicsMapFlagsNone);
 
-		float spawn_range = sim_params.cube_size * 0.5f;
+		float spawn_range = sim_params.static_params.cube_size * 0.5f;
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_positions_dptr, amount, -spawn_range, spawn_range);
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_velocities_dptr, amount, -1, 1);
 
@@ -161,19 +56,30 @@ namespace utils::runners
 
 	void gpu_ssbo::naive_calculation(const float delta_time)
 	{
-		alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params_dptr);
-		cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params_dptr);
-		separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, sim_params_dptr);
-		wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
+		namespace n_bhvr = behaviours::gpu::naive;
+		n_bhvr::alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov);
+		n_bhvr::cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
+		n_bhvr::separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
+		n_bhvr::wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
 		cudaDeviceSynchronize();
 
-		blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
+		n_bhvr::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
+	}
+	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
+	{
+		// TODO
+	}
+	void gpu_ssbo::coherent_grid_calculation(const float delta_time) 
+	{
+		// TODO
 	}
 
 	void gpu_ssbo::calculate(const float delta_time)
 	{
 		naive_calculation(delta_time);
+		//uniform_grid_calculation(delta_time);
+		//coherent_grid_calculation(delta_time);
 	}
 
 	void gpu_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
@@ -209,10 +115,14 @@ namespace utils::runners
 		return sim_params;
 	}
 
-	void gpu_ssbo::set_simulation_parameters(simulation_parameters new_params)
+	void gpu_ssbo::set_dynamic_simulation_parameters(simulation_parameters::dynamic_parameters new_dyn_params)
 	{
-		sim_params = new_params;
-		cudaMemcpy(sim_params_dptr, &sim_params, 1, cudaMemcpyHostToDevice);
-		// TODO ricrea planes se cube_size è stato modificato nei parametri
+		bool params_changed = sim_params.dynamic_params != new_dyn_params;
+		if (params_changed)
+		{
+			sim_params.dynamic_params = new_dyn_params;
+			cudaMemcpy(sim_params_dptr, &sim_params, sizeof(simulation_parameters), cudaMemcpyHostToDevice);
+			// TODO ricrea planes se cube_size è stato modificato nei parametri (solo se lo vuoi dinamico)
+		}
 	}
 }

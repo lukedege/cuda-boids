@@ -104,10 +104,11 @@
     <CudaCompile Include="old_main2.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="runners\boid_behaviours.h" />
+    <ClInclude Include="runners\cpu_boid_behaviours.h" />
     <ClInclude Include="runners\boid_runner.h" />
     <ClInclude Include="runners\cpu_ssbo.h" />
     <ClInclude Include="runners\cpu_vao.h" />
+    <CudaCompile Include="runners\gpu_boid_behaviours.h" />
     <ClInclude Include="runners\gpu_ssbo.h" />
     <ClInclude Include="runners\gpu_vao.h" />
     <ClInclude Include="runners\ssbo_runner.h" />

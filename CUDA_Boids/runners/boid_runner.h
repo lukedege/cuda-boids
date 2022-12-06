@@ -14,21 +14,42 @@ namespace utils::runners
 	public:
 		struct simulation_parameters
 		{
-			size_t boid_amount          {  10  }; // TODO split params in dynamic (coeffs, speed...) and static (amount, cubesize...)
-			float  boid_speed           { 3.0f };
-			float  boid_fov             { 10.f };
-			float  alignment_coeff      { 1.0f };
-			float  cohesion_coeff       { 0.9f };
-			float  separation_coeff     { 0.5f };
-			float  wall_separation_coeff{ 3.0f };
-			float  cube_size            { 20.f };
+			struct static_parameters
+			{
+				size_t boid_amount{ 100  }; // TODO split params in dynamic (coeffs, speed...) and static (amount, cubesize...)
+				float  cube_size  { 20.f };
+			} static_params;
+			struct dynamic_parameters
+			{
+				float  boid_speed           { 3.0f };
+				int    boid_fov             { 10   };
+				float  alignment_coeff      { 1.0f };
+				float  cohesion_coeff       { 0.9f };
+				float  separation_coeff     { 0.5f };
+				float  wall_separation_coeff{ 3.0f };
+
+				inline bool operator==(const dynamic_parameters& rhs) const
+				{
+					return boid_speed         == rhs.boid_speed &&
+						boid_fov              == rhs.boid_fov &&
+						alignment_coeff       == rhs.alignment_coeff &&
+						cohesion_coeff        == rhs.cohesion_coeff &&
+						separation_coeff      == rhs.separation_coeff &&
+						wall_separation_coeff == rhs.wall_separation_coeff;
+				}
+				inline bool operator!=(const dynamic_parameters& rhs) const
+				{
+					return !operator==(rhs);
+				}
+
+			} dynamic_params;
 		};
 
 		virtual void calculate(const float delta_time) = 0;
 		virtual void draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix) = 0;
 
 		virtual simulation_parameters get_simulation_parameters() = 0;
-		virtual void set_simulation_parameters(simulation_parameters new_params) = 0;
+		virtual void set_dynamic_simulation_parameters(simulation_parameters::dynamic_parameters new_dyn_params) = 0;
 
 	protected:
 		boid_runner(utils::graphics::opengl::Shader&& boid_shader, simulation_parameters params = {}) :
@@ -43,7 +64,7 @@ namespace utils::runners
 
 		inline std::array<utils::math::plane, 6> reset_volume()
 		{
-			float val = sim_params.cube_size * 0.5f;
+			float val = sim_params.static_params.cube_size * 0.5f;
 			return
 			{
 				utils::math::plane{{  val,0,0,1 }, { -1,0,0,0 }}, //xp
@@ -57,7 +78,7 @@ namespace utils::runners
 		
 		inline utils::graphics::opengl::Mesh reset_cube_mesh()
 		{
-			float val = sim_params.cube_size * 0.5f;
+			float val = sim_params.static_params.cube_size * 0.5f;
 			std::vector<utils::graphics::opengl::Vertex> vertices
 			{
 				{{ -val,  val, -val, }},//0 up   front sx

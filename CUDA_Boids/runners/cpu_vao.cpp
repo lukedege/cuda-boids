@@ -15,7 +15,7 @@ namespace utils::runners
 {
 	cpu_vao::cpu_vao(simulation_parameters params) :
 		vao_runner{ { "shaders/vao.vert", "shaders/basic.frag", "shaders/vao.geom"}, params },
-		amount{ params.boid_amount },
+		amount{ params.static_params.boid_amount },
 		positions { std::vector<glm::vec3>(amount) },
 		velocities{ std::vector<glm::vec3>(amount) }
 	{

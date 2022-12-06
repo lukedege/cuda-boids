@@ -17,10 +17,12 @@ namespace utils::runners
 		~gpu_ssbo();
 
 		simulation_parameters get_simulation_parameters();
-		void set_simulation_parameters(simulation_parameters new_params);
+		void set_dynamic_simulation_parameters(simulation_parameters::dynamic_parameters new_dyn_params);
 
 	private:
 		void naive_calculation(const float delta_time);
+		void uniform_grid_calculation(const float delta_time);
+		void coherent_grid_calculation(const float delta_time);
 
 		size_t amount;
 

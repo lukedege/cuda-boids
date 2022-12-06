@@ -77,19 +77,23 @@ int main()
 	ImGui_ImplOpenGL3_Init("#version 430");
 
 	// Runner setup
-	utils::runners::boid_runner::simulation_parameters params // TODO SPLIT DYNAMIC PARAMETERS (coefficients, speed) FROM STATIC PARAMETERS (cube_size, amount...)
+	utils::runners::boid_runner::simulation_parameters params
 	{
-		{ 1000  },//boid_amount
-		{ 5.0f },//boid_speed
-		{ 4.0f },//boid_fov
-		{ 1.0f },//alignment_coeff
-		{ 0.8f },//cohesion_coeff
-		{ 1.0f },//separation_coeff
-		{ 10.0f },//wall_separation_coeff
-		{ 40.f },//cube_size
+		{
+			{ 100 },//boid_amount
+			{ 40.f },//cube_size
+		},
+		{
+			{ 5.0f },//boid_speed
+			{ 6    },//boid_fov
+			{ 1.0f },//alignment_coeff
+			{ 0.8f },//cohesion_coeff
+			{ 1.0f },//separation_coeff
+			{ 10.0f },//wall_separation_coeff
+		}
 	};
 	//utils::runners::boid_runner* runner;
-	utils::runners::cpu_ssbo runner{ params };
+	utils::runners::gpu_ssbo runner{ params };
 	//runner = &spec_runner;
 	
 	// Camera setup
@@ -141,11 +145,12 @@ int main()
 
 		// ImGUI window creation
 		ImGui::Begin("Boid settings");
-		ImGui::SliderFloat("Boid Speed"     , &params.boid_speed           , 0, 10);
-		ImGui::SliderFloat("Alignment"      , &params.alignment_coeff      , 0, 5);
-		ImGui::SliderFloat("Cohesion"       , &params.cohesion_coeff       , 0, 5);
-		ImGui::SliderFloat("Separation"     , &params.separation_coeff     , 0, 5);
-		ImGui::SliderFloat("Wall Separation", &params.wall_separation_coeff, 0, 20);
+		ImGui::SliderFloat("Boid Speed"     , &params.dynamic_params.boid_speed           , 0, 10);
+		ImGui::SliderInt  ("Boid Fov"       , &params.dynamic_params.boid_fov             , 0, 20);
+		ImGui::SliderFloat("Alignment"      , &params.dynamic_params.alignment_coeff      , 0, 5);
+		ImGui::SliderFloat("Cohesion"       , &params.dynamic_params.cohesion_coeff       , 0, 5);
+		ImGui::SliderFloat("Separation"     , &params.dynamic_params.separation_coeff     , 0, 5);
+		ImGui::SliderFloat("Wall Separation", &params.dynamic_params.wall_separation_coeff, 0, 20);
 		// Ends the window
 		ImGui::End();
 
@@ -154,7 +159,7 @@ int main()
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// Update parameters changed through imgui TODO make it work with gpu_ssbo
-		runner.set_simulation_parameters(params);
+		runner.set_dynamic_simulation_parameters(params.dynamic_params);
 
 		glfwSwapBuffers(glfw_window);
 	}
