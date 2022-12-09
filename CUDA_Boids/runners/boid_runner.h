@@ -16,7 +16,7 @@ namespace utils::runners
 		{
 			struct static_parameters
 			{
-				size_t boid_amount{ 100  }; // TODO split params in dynamic (coeffs, speed...) and static (amount, cubesize...)
+				size_t boid_amount{ 100  };
 				float  cube_size  { 20.f };
 			} static_params;
 			struct dynamic_parameters

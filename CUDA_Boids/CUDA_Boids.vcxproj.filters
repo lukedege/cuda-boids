@@ -52,6 +52,9 @@
     <Filter Include="Sources\Libraries\imgui">
       <UniqueIdentifier>{d02bb1a4-2f74-45da-8608-4a93d637ac97}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Headers\runners\behaviours">
+      <UniqueIdentifier>{b85cc323-b88c-402f-9b9a-54d35f721a80}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="utils\window.h">
@@ -90,9 +93,6 @@
     <ClInclude Include="runners\gpu_vao.h">
       <Filter>Headers\runners\vao_runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\cpu_boid_behaviours.h">
-      <Filter>Headers\runners</Filter>
-    </ClInclude>
     <ClInclude Include="utils\shader.h">
       <Filter>Headers\utils</Filter>
     </ClInclude>
@@ -101,6 +101,12 @@
     </ClInclude>
     <ClInclude Include="utils\camera.h">
       <Filter>Headers\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="runners\cpu_boid_behaviours.h">
+      <Filter>Headers\runners\behaviours</Filter>
+    </ClInclude>
+    <ClInclude Include="runners\behaviour_utils.h">
+      <Filter>Headers\runners\behaviours</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -129,7 +135,7 @@
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
     <CudaCompile Include="runners\gpu_boid_behaviours.h">
-      <Filter>Headers\runners</Filter>
+      <Filter>Headers\runners\behaviours</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

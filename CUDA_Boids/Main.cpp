@@ -27,7 +27,7 @@
 
 namespace ugl = utils::graphics::opengl;
 
-// input stuff TODO: MOVE SOMEWHERE ELSE
+// Input and callbacks setup
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mode);
@@ -42,6 +42,7 @@ ugl::orbit_camera camera{ glm::vec3(0, 0, 0), 50.f };
 
 int main()
 {
+	// OpenGL window setup
 	ugl::window wdw
 	{
 		ugl::window::window_create_info
@@ -62,7 +63,7 @@ int main()
 	ugl::window::window_size ws = wdw.get_size();
 	float width = static_cast<float>(ws.width), height = static_cast<float>(ws.height);
 
-	// setup callbacks
+	// Callbacks linking with glfw
 	glfwSetKeyCallback(glfw_window, key_callback);
 	glfwSetCursorPosCallback(glfw_window, mouse_pos_callback);
 	glfwSetMouseButtonCallback(glfw_window, mouse_button_callback);
@@ -71,7 +72,6 @@ int main()
 	// Imgui setup
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(glfw_window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
@@ -92,58 +92,52 @@ int main()
 			{ 10.0f },//wall_separation_coeff
 		}
 	};
-	//utils::runners::boid_runner* runner;
-	utils::runners::gpu_ssbo runner{ params };
-	//runner = &spec_runner;
+
+	utils::runners::cpu_ssbo runner{ params };
 	
-	// Camera setup
-	
+	// Visualization matrices setup for camera
 	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
 
+	// Measurements variables setup
 	GLfloat delta_time = 0.0f, last_frame = 0.0f, current_fps = 0.0f;
 	GLfloat before_calculations = 0.0f, after_calculations = 0.0f, delta_calculations = 0.0f;
 	GLfloat avg_calc = 1.f, avg_fps = 1.f;
 	GLfloat alpha = 0.9;
 	std::cout << std::setprecision(4) << std::fixed;
-	float test;
+
+	// Main loop
 	while (wdw.is_open())
 	{
-		// we determine the time passed from the beginning
-		// and we calculate the time difference between current frame rendering and the previous one
-		GLfloat currentFrame = glfwGetTime();
-		delta_time = currentFrame - last_frame;
-		last_frame = currentFrame;
+		// Calculate the time difference between current frame rendering and the previous one
+		GLfloat current_frame = glfwGetTime();
+		delta_time = current_frame - last_frame;
+		last_frame = current_frame;
 
-		// Tell OpenGL a new frame is about to begin
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
+		// Process input
 		glfwPollEvents();
 		process_keys(wdw, delta_time);
-		
-		// we "clear" the frame and z buffer
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+
+		// CALCULATION STEP
 
 		before_calculations = glfwGetTime();
-
 		runner.calculate(delta_time);
-
 		after_calculations = glfwGetTime(); // TODO measure time for kernel using CudaEvents
 		delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
 		
+		// DRAW STEP
+
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		view_matrix = camera.view_matrix();
 		runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
 
-		current_fps = (1 / delta_time);
-		//std::cout << "Calcs: " << delta_calculations << "ms | ";
-		//std::cout << "FPS: " << current_fps << "\n";
-		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
-		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
-
 		// ImGUI window creation
+		ImGui_ImplOpenGL3_NewFrame();// Tell OpenGL a new Imgui frame is about to begin
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
 		ImGui::Begin("Boid settings");
 		ImGui::SliderFloat("Boid Speed"     , &params.dynamic_params.boid_speed           , 0, 10);
 		ImGui::SliderInt  ("Boid Fov"       , &params.dynamic_params.boid_fov             , 0, 20);
@@ -151,22 +145,30 @@ int main()
 		ImGui::SliderFloat("Cohesion"       , &params.dynamic_params.cohesion_coeff       , 0, 5);
 		ImGui::SliderFloat("Separation"     , &params.dynamic_params.separation_coeff     , 0, 5);
 		ImGui::SliderFloat("Wall Separation", &params.dynamic_params.wall_separation_coeff, 0, 20);
-		// Ends the window
 		ImGui::End();
 
 		// Renders the ImGUI elements
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		// Update parameters changed through imgui TODO make it work with gpu_ssbo
+		// Update parameters changed through imgui
 		runner.set_dynamic_simulation_parameters(params.dynamic_params);
+
+		// Update performance measurements
+		current_fps = (1 / delta_time);
+		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
+		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
+		//std::cout << "Calcs: " << delta_calculations << "ms | ";
+		//std::cout << "FPS: " << current_fps << "\n";
 
 		glfwSwapBuffers(glfw_window);
 	}
+	// Print results
 	std::cout << "-----------------------------------\n";
 	std::cout << "Average FPS  : " << avg_fps << "\n";
 	std::cout << "Average calcs: " << avg_calc << "ms \n";
 
+	// Cleanup
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();

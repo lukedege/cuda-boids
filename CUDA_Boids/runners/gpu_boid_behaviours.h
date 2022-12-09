@@ -3,13 +3,12 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-#include "../utils/utils.h"
-#include "../utils/CUDA/vector_math.h"
+#include "behaviour_utils.h"
 #include "boid_runner.h"
 
-namespace utils::runners::behaviours::gpu
+namespace utils::runners::behaviours
 {
-	namespace naive
+	namespace naive::gpu
 	{
 		inline __global__ void alignment(float4* alignments, float4* positions, float4* velocities, size_t amount, size_t max_radius)
 		{
@@ -112,12 +111,15 @@ namespace utils::runners::behaviours::gpu
 			ssbo_positions[i] = clamp(ssbo_positions[i], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
 		}
 	}
-	namespace uniform_grid
+	namespace grid
 	{
-		// TODO
-	}
-	namespace coherent_grid
-	{
-		// TODO
+		namespace uniform::gpu
+		{
+			// TODO
+		}
+		namespace coherent::gpu
+		{
+			// TODO
+		}
 	}
 }

@@ -56,7 +56,7 @@ namespace utils::runners
 
 	void gpu_ssbo::naive_calculation(const float delta_time)
 	{
-		namespace n_bhvr = behaviours::gpu::naive;
+		namespace n_bhvr = behaviours::naive::gpu;
 		n_bhvr::alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov);
 		n_bhvr::cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
 		n_bhvr::separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
@@ -66,6 +66,9 @@ namespace utils::runners
 		n_bhvr::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
+
+	// TODO bring helper methods from cpu
+
 	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
 	{
 		// TODO
