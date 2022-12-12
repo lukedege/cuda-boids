@@ -51,6 +51,7 @@ namespace utils::runners
 		update_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, 0, sizeof(float4), amount, velocities.data());
 	}
 
+	// TODO maybe move helper methods to a prettier place instead of an anonymous namespace
 	namespace
 	{
 		std::vector<behaviours::grid::boid_cell_index> assign_grid_indices(const float4* boid_positions, const size_t boid_amount, const float grid_extent, const float grid_resolution)
@@ -115,7 +116,7 @@ namespace utils::runners
 		// 2) create a "grid" and localize each boid inside of it with a linear index
 		std::vector<grid_bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
 		
-		// 3) sort the boids according to their linear index 
+		// 3) sort the boids according to their cell's linear index 
 		auto order_by_cell_id = [](const grid_bhvr::boid_cell_index& a, const grid_bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
 		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), order_by_cell_id);
 		

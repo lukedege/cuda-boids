@@ -169,13 +169,55 @@ namespace
 	}
 }
 
+/* Test per kernel gpu_ssbo grid
+void gpu_ssbo::uniform_grid_calculation(const float delta_time)
+{
+	namespace grid_bhvr = behaviours::grid;
+
+	float boid_fov = sim_params.dynamic_params.boid_fov;
+	float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
+	float grid_resolution = sim_params.static_params.cube_size / cell_size;
+	int cell_amount = grid_resolution * grid_resolution * grid_resolution;
+
+	// ASSIGN GRID IDX
+	size_t bci_size = sizeof(grid_bhvr::boid_cell_index) * amount;
+	grid_bhvr::boid_cell_index* boid_cell_indices_dev = (grid_bhvr::boid_cell_index*)malloc(bci_size);
+	grid_bhvr::boid_cell_index* boid_cell_indices_dptr;
+	cudaMalloc(&boid_cell_indices_dptr, bci_size);
+	assign_grid_indices CUDA_KERNEL(grid_size, block_size)(boid_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
+	cudaMemcpy(boid_cell_indices_dev, boid_cell_indices_dptr, bci_size, cudaMemcpyDeviceToHost);
+	std::vector<grid_bhvr::boid_cell_index> test_device(boid_cell_indices_dev, boid_cell_indices_dev + amount);
+
+	std::vector<float4> posv(amount);
+	cudaMemcpy(posv.data(), ssbo_positions_dptr, sizeof(float4) * amount, cudaMemcpyDeviceToHost);
+	std::vector<grid_bhvr::boid_cell_index> test_host{ assign_grid_indices(posv.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
+
+	// SORT
+	thrust::device_ptr<grid_bhvr::boid_cell_index> thr_bci(boid_cell_indices_dptr);
+	thrust::sort(thr_bci, thr_bci + amount, order_by_cell_id());
+	cudaMemcpy(boid_cell_indices_dev, boid_cell_indices_dptr, bci_size, cudaMemcpyDeviceToHost);
+	std::vector<grid_bhvr::boid_cell_index> test_device_sorted(boid_cell_indices_dev, boid_cell_indices_dev + amount);
+
+
+	// FIND RANGES
+
+	size_t cir_size = sizeof(grid_bhvr::idx_range) * cell_amount;
+	grid_bhvr::idx_range* cell_idx_range_dptr;
+	grid_bhvr::idx_range* cell_idx_range_dev = (grid_bhvr::idx_range*)malloc(cir_size);
+	cudaMalloc(&cell_idx_range_dptr, cir_size);
+	find_cell_boid_range CUDA_KERNEL(grid_size, block_size)(cell_idx_range_dptr, boid_cell_indices_dptr, amount);
+	cudaMemcpy(cell_idx_range_dev, cell_idx_range_dptr, cir_size, cudaMemcpyDeviceToHost);
+	std::vector<grid_bhvr::idx_range> test_device_cir(cell_idx_range_dev, cell_idx_range_dev + cell_amount);
+
+	std::vector<grid_bhvr::idx_range> test_host_cir{ find_cell_boid_range(test_device_sorted.data(), amount, grid_resolution) };
+}*/
+
 
 int mainz()
 {	
-	size_t size = 10;
-	std::vector<float4> pos(100);
-	utils::cuda::containers::random_vec4_fill_hptr(pos.data(), pos.size(), -5, 5);
-	
+	//size_t size = 10;
+	//std::vector<float4> pos(100);
+	//utils::cuda::containers::random_vec4_fill_hptr(pos.data(), pos.size(), -5, 5);
 	
 	return 0;
 }

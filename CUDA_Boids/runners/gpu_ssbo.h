@@ -2,6 +2,7 @@
 #include "ssbo_runner.h"
 
 #include "../utils/CUDA/cudaGLmanager.h"
+#include "gpu_boid_behaviours.h"
 
 namespace utils::runners
 {
@@ -42,5 +43,12 @@ namespace utils::runners
 		float4* cohesions_dptr;
 		float4* separations_dptr;
 		float4* wall_separations_dptr;
+
+		// Grid-related fields
+		float grid_resolution;
+		behaviours::grid::boid_cell_index* boid_cell_indices_dptr; // aka bci
+		behaviours::grid::idx_range* cell_idx_range_dptr; // aka cir
+
+		cudaStream_t bci_stream, cir_stream;
 	};
 }

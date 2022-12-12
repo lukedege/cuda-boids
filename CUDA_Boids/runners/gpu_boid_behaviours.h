@@ -115,11 +115,120 @@ namespace utils::runners::behaviours
 	{
 		namespace uniform::gpu
 		{
-			// TODO
+			inline __global__ void alignment(float4* alignments, float4* positions, float4* velocities, size_t amount, boid_cell_index* boid_cell_indices, idx_range* cell_idx_ranges, size_t max_radius)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx >= amount) return; // avoid threads ids overflowing the array
+				
+				float4 alignment{ 0 };
+				int current_neighbour;
+				boid_cell_index current_boid = boid_cell_indices[idx];
+				idx_range range = cell_idx_ranges[current_boid.cell_id];
+				bool in_radius;
+				for (size_t i = range.start; i < range.end; i++)
+				{
+					current_neighbour = boid_cell_indices[i].boid_id;
+					in_radius = utils::math::distance2(positions[current_boid.boid_id], positions[current_neighbour]) < max_radius * max_radius;
+					// condition as multiplier avoids warp divergence
+					alignment += velocities[current_neighbour] * in_radius;
+				}
+
+				alignments[current_boid.boid_id] = utils::math::normalize_or_zero(alignment);
+
+			}
+
+			inline __global__ void cohesion(float4* cohesions, float4* positions, size_t amount, boid_cell_index* boid_cell_indices, idx_range* cell_idx_ranges, size_t max_radius)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx >= amount) return; 
+
+				float4 cohesion{ 0 }, baricenter{ 0 };
+				float counter{ 0 };
+				int current_neighbour;
+				boid_cell_index current_boid = boid_cell_indices[idx];
+				idx_range range = cell_idx_ranges[current_boid.cell_id];
+				bool in_radius;
+				for (size_t i = range.start; i < range.end; i++)
+				{
+					current_neighbour = boid_cell_indices[i].boid_id;
+					in_radius = utils::math::distance2(positions[current_boid.boid_id], positions[current_neighbour]) < max_radius * max_radius;
+
+					baricenter += positions[current_neighbour] * in_radius;
+					counter += 1.f * in_radius;
+				}
+				baricenter /= counter;
+				cohesion = baricenter - positions[current_boid.boid_id];
+				cohesions[current_boid.boid_id] = utils::math::normalize_or_zero(cohesion);
+
+			}
+
+			inline __global__ void separation(float4* separations, float4* positions, size_t amount, boid_cell_index* boid_cell_indices, idx_range* cell_idx_ranges, size_t max_radius)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx >= amount) return;
+
+				float4 separation{ 0 };
+				float4 repulsion;
+				int current_neighbour;
+				bool in_radius;
+				boid_cell_index current_boid = boid_cell_indices[idx];
+				idx_range range = cell_idx_ranges[current_boid.cell_id];
+				for (size_t i = range.start; i < range.end; i++)
+				{
+					current_neighbour = boid_cell_indices[i].boid_id;
+					repulsion = positions[current_boid.boid_id] - positions[current_neighbour];
+					in_radius = utils::math::length2(repulsion) < max_radius * max_radius;
+					separation += (utils::math::normalize_or_zero(repulsion) / (length(repulsion) + 0.0001f)) * in_radius; //TODO may be more optimizable but we'll see
+				}
+
+				separations[current_boid.boid_id] = utils::math::normalize_or_zero(separation);
+			}
+
+			inline __global__ void wall_separation(float4* wall_separations, float4* positions, utils::math::plane* borders, size_t amount)
+			{
+				int current = blockIdx.x * blockDim.x + threadIdx.x;
+				if (current >= amount) return;
+
+				float4 separation{ 0 };
+				float4 repulsion;
+				float distance;
+				float near_wall;
+				// wall check
+				for (size_t b = 0; b < 6; b++)
+				{
+					distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
+					near_wall = distance < 1.f;
+					repulsion = (borders[b].normal / abs(distance)) * near_wall;
+					separation += repulsion;
+				}
+
+				wall_separations[current] = utils::math::normalize_or_zero(separation);
+			}
+
+			inline __global__ void blender(float4* ssbo_positions, float4* ssbo_velocities,
+				float4* alignments, float4* cohesions, float4* separations, float4* wall_separations,
+				utils::runners::boid_runner::simulation_parameters* simulation_params, size_t amount, const float delta_time)
+			{
+				int i = blockIdx.x * blockDim.x + threadIdx.x;
+				if (i >= amount) return;
+
+				float chs = simulation_params->static_params.cube_size / 2;
+				float4 accel_blend;
+
+				accel_blend = simulation_params->dynamic_params.alignment_coeff * alignments[i]
+					+ simulation_params->dynamic_params.cohesion_coeff * cohesions[i]
+					+ simulation_params->dynamic_params.separation_coeff * separations[i]
+					+ simulation_params->dynamic_params.wall_separation_coeff * wall_separations[i];
+				
+				ssbo_velocities[i] = utils::math::normalize_or_zero(ssbo_velocities[i] + accel_blend * delta_time); //v = u + at
+				ssbo_positions[i] += ssbo_velocities[i] * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
+				ssbo_positions[i] = clamp(ssbo_positions[i], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+			}
 		}
 		namespace coherent::gpu
 		{
 			// TODO
+			// TODO blender and wallseparation are the same for all gpu modes (naive, uniform or coherent), consider extracting it and generalizing it
 		}
 	}
 }

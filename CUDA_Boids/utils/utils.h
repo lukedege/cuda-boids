@@ -76,7 +76,7 @@ namespace utils
 			return dot(plane.normal, point - plane.origin);
 		}
 
-		inline __host__ __device__ float normalized_value_in_range(float val, float min, float max)
+		inline __host__ __device__ float normalized_value_in_range(const float val, const float min, const float max)
 		{
 			float result[] = { 0, (val - min) / (max - min) };
 			int is_valid = max > min;

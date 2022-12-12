@@ -80,12 +80,12 @@ int main()
 	utils::runners::boid_runner::simulation_parameters params
 	{
 		{
-			{ 100 },//boid_amount
-			{ 40.f },//cube_size
+			{ 100000 },//boid_amount
+			{ 100.f },//cube_size
 		},
 		{
 			{ 5.0f },//boid_speed
-			{ 6    },//boid_fov
+			{ 5   },//boid_fov
 			{ 1.0f },//alignment_coeff
 			{ 0.8f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
@@ -140,7 +140,7 @@ int main()
 
 		ImGui::Begin("Boid settings");
 		ImGui::SliderFloat("Boid Speed"     , &params.dynamic_params.boid_speed           , 0, 10);
-		ImGui::SliderInt  ("Boid Fov"       , &params.dynamic_params.boid_fov             , 0, 20);
+		ImGui::SliderInt  ("Boid Fov"       , &params.dynamic_params.boid_fov             , 1, 20);
 		ImGui::SliderFloat("Alignment"      , &params.dynamic_params.alignment_coeff      , 0, 5);
 		ImGui::SliderFloat("Cohesion"       , &params.dynamic_params.cohesion_coeff       , 0, 5);
 		ImGui::SliderFloat("Separation"     , &params.dynamic_params.separation_coeff     , 0, 5);
