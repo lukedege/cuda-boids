@@ -61,10 +61,17 @@ namespace utils::runners
 		grid_resolution = sim_params.static_params.cube_size / cell_size;
 		int cell_amount = grid_resolution * grid_resolution * grid_resolution;
 
-		cudaMalloc(&boid_cell_indices_dptr, sizeof(behaviours::grid::boid_cell_index) * amount); // move to field
+		cudaMalloc(&boid_cell_indices_dptr, sizeof(behaviours::grid::boid_cell_index) * amount);
 		cudaMalloc(&cell_idx_range_dptr   , sizeof(behaviours::grid::idx_range) * cell_amount);
 
 		cudaStreamCreate(&bci_stream); cudaStreamCreate(&cir_stream);
+
+		// create arrays for swap
+		cudaMalloc(&positions_aux_dptr   , sizeof(float4) * amount); 
+		cudaMalloc(&velocities_aux_dptr  , sizeof(float4) * amount);
+		cudaMalloc(&cell_indices_aux_dptr, sizeof(int)    * amount);
+
+		cudaStreamCreate(&pos_stream); cudaStreamCreate(&vel_stream);
 	}
 
 	void gpu_ssbo::naive_calculation(const float delta_time)
@@ -139,13 +146,33 @@ namespace utils::runners
 				return a.cell_id < b.cell_id;
 			}
 		};
+
+		// reorders the content of src into dst by using bci for the ordering
+		inline __global__ void reorder_by_bci(float4* dst, const float4* src, const behaviours::grid::boid_cell_index* boid_cell_indices, const size_t boid_amount)
+		{
+			int current = blockIdx.x * blockDim.x + threadIdx.x;
+			if (current >= boid_amount) return; // avoid threads ids overflowing the array
+
+			behaviours::grid::boid_cell_index current_boid_cell = boid_cell_indices[current];
+
+			dst[current] = src[current_boid_cell.boid_id];
+		}
+		inline __global__ void reorder_by_bci(int* dst, const behaviours::grid::boid_cell_index* boid_cell_indices, const size_t boid_amount)
+		{
+			int current = blockIdx.x * blockDim.x + threadIdx.x;
+			if (current >= boid_amount) return; // avoid threads ids overflowing the array
+
+			behaviours::grid::boid_cell_index current_boid_cell = boid_cell_indices[current];
+
+			dst[current] = current_boid_cell.cell_id;
+		}
 	}
 	
 	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
 	{
 		namespace grid_bhvr = behaviours::grid;
 
-		int cell_amount = grid_resolution * grid_resolution * grid_resolution;
+		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
 
 		//Reset the grid arrays
 		cuda::checks::cuda(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::grid::boid_cell_index) * amount, bci_stream));
@@ -178,7 +205,47 @@ namespace utils::runners
 	}
 	void gpu_ssbo::coherent_grid_calculation(const float delta_time) 
 	{
-		// TODO
+		namespace grid_bhvr = behaviours::grid;
+
+		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
+		if (sim_params.dynamic_params.boid_fov > 9)
+			std::cout << "";
+
+		//Reset the grid arrays
+		cuda::checks::cuda(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::grid::boid_cell_index) * amount, bci_stream));
+		cuda::checks::cuda(cudaMemsetAsync(cell_idx_range_dptr   , 0, sizeof(behaviours::grid::idx_range) * cell_amount , cir_stream));
+		cuda::checks::cuda(cudaDeviceSynchronize());
+
+		// ASSIGN GRID IDX
+		assign_grid_indices CUDA_KERNEL(grid_size, block_size)(boid_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
+		cudaDeviceSynchronize();
+
+		// SORTs
+		thrust::device_ptr<grid_bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
+		thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
+
+		// Reorder vel/pos in another array
+		reorder_by_bci CUDA_KERNEL(grid_size, block_size, 0, pos_stream) (positions_aux_dptr, ssbo_positions_dptr , boid_cell_indices_dptr, amount);
+		reorder_by_bci CUDA_KERNEL(grid_size, block_size, 0, vel_stream) (velocities_aux_dptr, ssbo_velocities_dptr, boid_cell_indices_dptr, amount);
+		reorder_by_bci CUDA_KERNEL(grid_size, block_size, 0, bci_stream) (cell_indices_aux_dptr, boid_cell_indices_dptr, amount);
+
+		// Copy values back to ssbo_dptr (we need this as to copy the sorted data into the gl-managed ssbo)
+		cuda::checks::cuda(cudaMemcpyAsync(ssbo_positions_dptr , positions_aux_dptr , sizeof(float4) * amount, cudaMemcpyDeviceToDevice, pos_stream));
+		cuda::checks::cuda(cudaMemcpyAsync(ssbo_velocities_dptr, velocities_aux_dptr, sizeof(float4) * amount, cudaMemcpyDeviceToDevice, vel_stream));
+
+		// FIND RANGES
+		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_dptr, boid_cell_indices_dptr, amount);
+		cudaDeviceSynchronize();
+
+		// CALCULATE VEL
+		grid_bhvr::coherent::gpu::alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::coherent::gpu::cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::coherent::gpu::separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::coherent::gpu::wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
+		cudaDeviceSynchronize();
+		//
+		grid_bhvr::coherent::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
+		cudaDeviceSynchronize();
 	}
 
 	void gpu_ssbo::calculate(const float delta_time)
@@ -217,6 +284,10 @@ namespace utils::runners
 		cudaStreamDestroy(bci_stream); cudaStreamDestroy(cir_stream);
 		cudaFree(&boid_cell_indices_dptr);
 		cudaFree(&cell_idx_range_dptr);
+		cudaStreamDestroy(pos_stream); cudaStreamDestroy(vel_stream);
+		cudaFree(&positions_aux_dptr);
+		cudaFree(&velocities_aux_dptr);
+		cudaFree(&cell_indices_aux_dptr);
 	}
 
 	gpu_ssbo::simulation_parameters gpu_ssbo::get_simulation_parameters()
@@ -231,15 +302,13 @@ namespace utils::runners
 		{
 			if (sim_params.dynamic_params.boid_fov != new_dyn_params.boid_fov)
 			{
-				cudaFree(&boid_cell_indices_dptr);
 				cudaFree(&cell_idx_range_dptr);
 
 				float boid_fov = new_dyn_params.boid_fov;
 				float cell_size = 2 * boid_fov;
 				grid_resolution = sim_params.static_params.cube_size / cell_size;
-				int cell_amount = grid_resolution * grid_resolution * grid_resolution;
 
-				cudaMalloc(&boid_cell_indices_dptr, sizeof(behaviours::grid::boid_cell_index) * amount); 
+				int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
 				cudaMalloc(&cell_idx_range_dptr   , sizeof(behaviours::grid::idx_range) * cell_amount);
 			}
 			sim_params.dynamic_params = new_dyn_params;

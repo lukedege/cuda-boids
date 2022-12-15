@@ -50,5 +50,12 @@ namespace utils::runners
 		behaviours::grid::idx_range* cell_idx_range_dptr; // aka cir
 
 		cudaStream_t bci_stream, cir_stream;
+
+		// Swap-auxiliary arrays
+		float4* positions_aux_dptr;
+		float4* velocities_aux_dptr;
+		int* cell_indices_aux_dptr;
+
+		cudaStream_t pos_stream, vel_stream;
 	};
 }

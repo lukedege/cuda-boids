@@ -47,13 +47,13 @@ int main()
 	{
 		ugl::window::window_create_info
 		{
-			{ "Prova" }, //.title
+			{ "CUDA Boid simulation" }, //.title
 			{ 4       }, //.gl_version_major
 			{ 3       }, //.gl_version_minor
-			{ 1200    }, //.window_width
-			{ 900     }, //.window_height
-			{ 1200    }, //.viewport_width
-			{ 900     }, //.viewport_height
+			{ 1280    }, //.window_width
+			{ 720     }, //.window_height
+			{ 1280    }, //.viewport_width
+			{ 720     }, //.viewport_height
 			{ false   }, //.resizable
 			{ true   }, //.debug_gl
 		}
@@ -85,7 +85,7 @@ int main()
 		},
 		{
 			{ 5.0f },//boid_speed
-			{ 5   },//boid_fov
+			{ 3    },//boid_fov
 			{ 1.0f },//alignment_coeff
 			{ 0.8f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
@@ -93,7 +93,7 @@ int main()
 		}
 	};
 
-	utils::runners::cpu_ssbo runner{ params };
+	utils::runners::gpu_ssbo runner{ params };
 	
 	// Visualization matrices setup for camera
 	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
