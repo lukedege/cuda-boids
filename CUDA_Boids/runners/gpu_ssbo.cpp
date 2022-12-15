@@ -203,6 +203,7 @@ namespace utils::runners
 		grid_bhvr::uniform::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
+
 	void gpu_ssbo::coherent_grid_calculation(const float delta_time) 
 	{
 		namespace grid_bhvr = behaviours::grid;
