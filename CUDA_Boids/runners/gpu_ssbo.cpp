@@ -26,7 +26,7 @@ namespace utils::runners
 		amount{ params.static_params.boid_amount },
 		ssbo_positions_dptr{ nullptr },
 		ssbo_velocities_dptr{ nullptr },
-		block_size{ 128 },
+		block_size{ 64 },
 		grid_size{ static_cast<size_t>(utils::math::ceil(amount, block_size)) }
 	{
 		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 0, 0);
@@ -61,8 +61,8 @@ namespace utils::runners
 		grid_resolution = sim_params.static_params.cube_size / cell_size;
 		int cell_amount = grid_resolution * grid_resolution * grid_resolution;
 
-		cudaMalloc(&boid_cell_indices_dptr, sizeof(behaviours::grid::boid_cell_index) * amount);
-		cudaMalloc(&cell_idx_range_dptr   , sizeof(behaviours::grid::idx_range) * cell_amount);
+		cudaMalloc(&boid_cell_indices_dptr, sizeof(behaviours::boid_cell_index) * amount);
+		cudaMalloc(&cell_idx_range_dptr   , sizeof(behaviours::idx_range) * cell_amount);
 
 		cudaStreamCreate(&bci_stream); cudaStreamCreate(&cir_stream);
 
@@ -76,14 +76,15 @@ namespace utils::runners
 
 	void gpu_ssbo::naive_calculation(const float delta_time)
 	{
-		namespace n_bhvr = behaviours::naive::gpu;
-		n_bhvr::alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov);
-		n_bhvr::cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
-		n_bhvr::separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
-		n_bhvr::wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
+		// Calculate velocities from all behaviours concurrently
+		behaviours::gpu::naive::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov);
+		behaviours::gpu::naive::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
+		behaviours::gpu::naive::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, sim_params.dynamic_params.boid_fov);
+		behaviours::gpu::wall_separation   CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
 		cudaDeviceSynchronize();
 
-		n_bhvr::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
+		// Blend velocities from behaviours into the final velocity for that frame per each boid
+		behaviours::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
 
@@ -91,7 +92,7 @@ namespace utils::runners
 	namespace
 	{
 		// all pointers are dptrs
-		inline __global__ void assign_grid_indices(behaviours::grid::boid_cell_index* boid_cell_indices, const float4* boid_positions, const size_t boid_amount, const float grid_extent, const float grid_resolution)
+		inline __global__ void assign_grid_indices(behaviours::boid_cell_index* boid_cell_indices, const float4* boid_positions, const size_t boid_amount, const float grid_extent, const float grid_resolution)
 		{
 			int current = blockIdx.x * blockDim.x + threadIdx.x;
 			if (current >= boid_amount) return; // avoid threads ids overflowing the array
@@ -101,7 +102,7 @@ namespace utils::runners
 
 			// trying to work with local/register memory as much as possible
 			const float4 current_position = boid_positions[current];
-			behaviours::grid::boid_cell_index new_mapping;
+			behaviours::boid_cell_index new_mapping;
 
 			int x = utils::math::normalized_value_in_range(current_position.x, -cube_half_size, cube_half_size) * grid_resolution;
 			int y = utils::math::normalized_value_in_range(current_position.y, -cube_half_size, cube_half_size) * grid_resolution;
@@ -113,8 +114,8 @@ namespace utils::runners
 			boid_cell_indices[current] = new_mapping;
 		}
 
-		// TODO maybe its better to split in two arrays (starts and ends...)
-		inline __global__ void find_cell_boid_range(behaviours::grid::idx_range* cell_idx_range, const behaviours::grid::boid_cell_index* boid_cell_indices, const size_t boid_amount)
+		// TODO its better to split in two arrays (starts and ends...) for better and coalescent memory access 
+		inline __global__ void find_cell_boid_range(behaviours::idx_range* cell_idx_range, const behaviours::boid_cell_index* boid_cell_indices, const size_t boid_amount)
 		{
 			int current = blockIdx.x * blockDim.x + threadIdx.x;
 			if (current >= boid_amount) return; // avoid threads ids overflowing the array
@@ -141,28 +142,28 @@ namespace utils::runners
 		
 		struct order_by_cell_id
 		{
-			__host__ __device__ bool operator() (const behaviours::grid::boid_cell_index& a, const behaviours::grid::boid_cell_index& b) const
+			__host__ __device__ bool operator() (const behaviours::boid_cell_index& a, const behaviours::boid_cell_index& b) const
 			{
 				return a.cell_id < b.cell_id;
 			}
 		};
 
 		// reorders the content of src into dst by using bci for the ordering
-		inline __global__ void reorder_by_bci(float4* dst, const float4* src, const behaviours::grid::boid_cell_index* boid_cell_indices, const size_t boid_amount)
+		inline __global__ void reorder_by_bci(float4* dst, const float4* src, const behaviours::boid_cell_index* boid_cell_indices, const size_t boid_amount)
 		{
 			int current = blockIdx.x * blockDim.x + threadIdx.x;
 			if (current >= boid_amount) return; // avoid threads ids overflowing the array
 
-			behaviours::grid::boid_cell_index current_boid_cell = boid_cell_indices[current];
+			behaviours::boid_cell_index current_boid_cell = boid_cell_indices[current];
 
 			dst[current] = src[current_boid_cell.boid_id];
 		}
-		inline __global__ void reorder_by_bci(int* dst, const behaviours::grid::boid_cell_index* boid_cell_indices, const size_t boid_amount)
+		inline __global__ void reorder_by_bci(int* dst, const behaviours::boid_cell_index* boid_cell_indices, const size_t boid_amount)
 		{
 			int current = blockIdx.x * blockDim.x + threadIdx.x;
 			if (current >= boid_amount) return; // avoid threads ids overflowing the array
 
-			behaviours::grid::boid_cell_index current_boid_cell = boid_cell_indices[current];
+			behaviours::boid_cell_index current_boid_cell = boid_cell_indices[current];
 
 			dst[current] = current_boid_cell.cell_id;
 		}
@@ -170,58 +171,54 @@ namespace utils::runners
 	
 	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
 	{
-		namespace grid_bhvr = behaviours::grid;
+		namespace grid_bhvr = behaviours;
 
 		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
 
 		//Reset the grid arrays
-		cuda::checks::cuda(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::grid::boid_cell_index) * amount, bci_stream));
-		cuda::checks::cuda(cudaMemsetAsync(cell_idx_range_dptr   , 0, sizeof(behaviours::grid::idx_range) * cell_amount , cir_stream));
+		cuda::checks::cuda(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::boid_cell_index) * amount, bci_stream));
+		cuda::checks::cuda(cudaMemsetAsync(cell_idx_range_dptr   , 0, sizeof(behaviours::idx_range) * cell_amount , cir_stream));
 		cuda::checks::cuda(cudaDeviceSynchronize());
 		
-		// ASSIGN GRID IDX
+		// Assign linear grid index to each boid
 		assign_grid_indices CUDA_KERNEL(grid_size, block_size)(boid_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
 		cudaDeviceSynchronize();
-		// SORT
-		//grid_bhvr::boid_cell_index* boid_cell_indices_dev = (grid_bhvr::boid_cell_index*)malloc(sizeof(behaviours::grid::boid_cell_index) * amount);
-		//cudaMemcpy(boid_cell_indices_dev, boid_cell_indices_dptr, sizeof(behaviours::grid::boid_cell_index) * amount, cudaMemcpyDeviceToHost);
-		//std::vector<grid_bhvr::boid_cell_index> test_device(boid_cell_indices_dev, boid_cell_indices_dev + amount);
 
+		// Sort boids by grid index
 		thrust::device_ptr<grid_bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
 		thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
 
-		// FIND RANGES
+		// Find ranges for boids living in the same grid cell
 		find_cell_boid_range CUDA_KERNEL(grid_size, block_size)(cell_idx_range_dptr, boid_cell_indices_dptr, amount);
 
-		// CALCULATE VEL
-		grid_bhvr::uniform::gpu::alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr , ssbo_positions_dptr, ssbo_velocities_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-		grid_bhvr::uniform::gpu::cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr  , ssbo_positions_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-		grid_bhvr::uniform::gpu::separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-		grid_bhvr::uniform::gpu::wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
+		// Calculate velocities from all behaviours concurrently
+		grid_bhvr::gpu::grid::uniform::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr , ssbo_positions_dptr, ssbo_velocities_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::gpu::grid::uniform::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr  , ssbo_positions_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::gpu::grid::uniform::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::gpu::wall_separation           CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
 		cudaDeviceSynchronize();
-		//
-		grid_bhvr::uniform::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
+
+		// Blend velocities from behaviours into the final velocity for that frame per each boid
+		grid_bhvr::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
 
 	void gpu_ssbo::coherent_grid_calculation(const float delta_time) 
 	{
-		namespace grid_bhvr = behaviours::grid;
+		namespace grid_bhvr = behaviours;
 
 		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
-		if (sim_params.dynamic_params.boid_fov > 9)
-			std::cout << "";
 
 		//Reset the grid arrays
-		cuda::checks::cuda(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::grid::boid_cell_index) * amount, bci_stream));
-		cuda::checks::cuda(cudaMemsetAsync(cell_idx_range_dptr   , 0, sizeof(behaviours::grid::idx_range) * cell_amount , cir_stream));
+		cuda::checks::cuda(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::boid_cell_index) * amount, bci_stream));
+		cuda::checks::cuda(cudaMemsetAsync(cell_idx_range_dptr   , 0, sizeof(behaviours::idx_range) * cell_amount , cir_stream));
 		cuda::checks::cuda(cudaDeviceSynchronize());
 
-		// ASSIGN GRID IDX
+		// Assign linear grid index to each boid
 		assign_grid_indices CUDA_KERNEL(grid_size, block_size)(boid_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
 		cudaDeviceSynchronize();
 
-		// SORTs
+		// Sort boids by grid index
 		thrust::device_ptr<grid_bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
 		thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
 
@@ -230,30 +227,38 @@ namespace utils::runners
 		reorder_by_bci CUDA_KERNEL(grid_size, block_size, 0, vel_stream) (velocities_aux_dptr, ssbo_velocities_dptr, boid_cell_indices_dptr, amount);
 		reorder_by_bci CUDA_KERNEL(grid_size, block_size, 0, bci_stream) (cell_indices_aux_dptr, boid_cell_indices_dptr, amount);
 
-		// Copy values back to ssbo_dptr (we need this as to copy the sorted data into the gl-managed ssbo)
+		// Copy values back to ssbo arrays (we need this as to copy the sorted data into the gl-managed ssbo)
 		cuda::checks::cuda(cudaMemcpyAsync(ssbo_positions_dptr , positions_aux_dptr , sizeof(float4) * amount, cudaMemcpyDeviceToDevice, pos_stream));
 		cuda::checks::cuda(cudaMemcpyAsync(ssbo_velocities_dptr, velocities_aux_dptr, sizeof(float4) * amount, cudaMemcpyDeviceToDevice, vel_stream));
 
-		// FIND RANGES
+		// Find ranges for boids living in the same grid cell
 		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_dptr, boid_cell_indices_dptr, amount);
 		cudaDeviceSynchronize();
 
-		// CALCULATE VEL
-		grid_bhvr::coherent::gpu::alignment       CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-		grid_bhvr::coherent::gpu::cohesion        CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-		grid_bhvr::coherent::gpu::separation      CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-		grid_bhvr::coherent::gpu::wall_separation CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
+		// Calculate velocities from all behaviours concurrently
+		grid_bhvr::gpu::grid::coherent::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, ssbo_positions_dptr, ssbo_velocities_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::gpu::grid::coherent::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr, ssbo_positions_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::gpu::grid::coherent::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
+		grid_bhvr::gpu::wall_separation            CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr, sim_volume_dptr, amount);
 		cudaDeviceSynchronize();
-		//
-		grid_bhvr::coherent::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
+
+		// Blend velocities from behaviours into the final velocity for that frame per each boid
+		grid_bhvr::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
 		cudaDeviceSynchronize();
 	}
 
+	// TODO see if you can make this template and not check every loop the condition (sim_type aint gonna change) (https://stackoverflow.com/questions/56742898/avoid-checking-the-same-condition-every-step-in-a-loop-in-c)
 	void gpu_ssbo::calculate(const float delta_time)
 	{
-		//naive_calculation(delta_time);
-		uniform_grid_calculation(delta_time);
-		//coherent_grid_calculation(delta_time);
+		switch (sim_params.static_params.sim_type)
+		{
+		case NAIVE:
+			naive_calculation(delta_time);
+		case UNIFORM_GRID:
+			uniform_grid_calculation(delta_time);
+		case COHERENT_GRID:
+			coherent_grid_calculation(delta_time);
+		}
 	}
 
 	void gpu_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
@@ -275,20 +280,27 @@ namespace utils::runners
 
 	gpu_ssbo::~gpu_ssbo()
 	{
-		cudaStreamDestroy(ali_stream); cudaStreamDestroy(coh_stream); cudaStreamDestroy(sep_stream); cudaStreamDestroy(wsp_stream);
-		cudaFree(&sim_params_dptr);
-		cudaFree(&sim_volume_dptr);
-		cudaFree(&alignments_dptr      );
-		cudaFree(&cohesions_dptr       );
-		cudaFree(&separations_dptr     );
-		cudaFree(&wall_separations_dptr);
-		cudaStreamDestroy(bci_stream); cudaStreamDestroy(cir_stream);
-		cudaFree(&boid_cell_indices_dptr);
-		cudaFree(&cell_idx_range_dptr);
-		cudaStreamDestroy(pos_stream); cudaStreamDestroy(vel_stream);
-		cudaFree(&positions_aux_dptr);
-		cudaFree(&velocities_aux_dptr);
-		cudaFree(&cell_indices_aux_dptr);
+		cuda::checks::cuda(cudaStreamDestroy(ali_stream)); 
+		cuda::checks::cuda(cudaStreamDestroy(coh_stream)); 
+		cuda::checks::cuda(cudaStreamDestroy(sep_stream)); 
+		cuda::checks::cuda(cudaStreamDestroy(wsp_stream));
+		cuda::checks::cuda(cudaFree(&sim_params_dptr));
+		cuda::checks::cuda(cudaFree(&sim_volume_dptr));
+		cuda::checks::cuda(cudaFree(&alignments_dptr      ));
+		cuda::checks::cuda(cudaFree(&cohesions_dptr       ));
+		cuda::checks::cuda(cudaFree(&separations_dptr     ));
+		cuda::checks::cuda(cudaFree(&wall_separations_dptr));
+
+		cuda::checks::cuda(cudaStreamDestroy(bci_stream)); 
+		cuda::checks::cuda(cudaStreamDestroy(cir_stream));
+		cuda::checks::cuda(cudaFree(&boid_cell_indices_dptr));
+		cuda::checks::cuda(cudaFree(&cell_idx_range_dptr));
+
+		cuda::checks::cuda(cudaStreamDestroy(pos_stream)); 
+		cuda::checks::cuda(cudaStreamDestroy(vel_stream));
+		cuda::checks::cuda(cudaFree(&positions_aux_dptr));
+		cuda::checks::cuda(cudaFree(&velocities_aux_dptr));
+		cuda::checks::cuda(cudaFree(&cell_indices_aux_dptr));
 	}
 
 	gpu_ssbo::simulation_parameters gpu_ssbo::get_simulation_parameters()
@@ -301,19 +313,21 @@ namespace utils::runners
 		bool params_changed = sim_params.dynamic_params != new_dyn_params;
 		if (params_changed)
 		{
+			// If the boid_fov parameter changed, the grid must be rebuilt 
 			if (sim_params.dynamic_params.boid_fov != new_dyn_params.boid_fov)
 			{
-				cudaFree(&cell_idx_range_dptr);
+				cuda::checks::cuda(cudaFree(&cell_idx_range_dptr));
 
 				float boid_fov = new_dyn_params.boid_fov;
 				float cell_size = 2 * boid_fov;
 				grid_resolution = sim_params.static_params.cube_size / cell_size;
 
 				int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
-				cudaMalloc(&cell_idx_range_dptr   , sizeof(behaviours::grid::idx_range) * cell_amount);
+				cuda::checks::cuda(cudaMalloc(&cell_idx_range_dptr   , sizeof(behaviours::idx_range) * cell_amount));
 			}
+			// Update parameters (both on cpu and gpu)
 			sim_params.dynamic_params = new_dyn_params;
-			cudaMemcpy(sim_params_dptr, &sim_params, sizeof(simulation_parameters), cudaMemcpyHostToDevice);
+			cuda::checks::cuda(cudaMemcpy(sim_params_dptr, &sim_params, sizeof(simulation_parameters), cudaMemcpyHostToDevice));
 		}
 	}
 }

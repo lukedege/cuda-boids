@@ -193,6 +193,9 @@ void gpu_ssbo::uniform_grid_calculation(const float delta_time)
 	std::vector<grid_bhvr::boid_cell_index> test_host{ assign_grid_indices(posv.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
 
 	// SORT
+	//grid_bhvr::boid_cell_index* boid_cell_indices_dev = (grid_bhvr::boid_cell_index*)malloc(sizeof(behaviours::grid::boid_cell_index) * amount);
+	//cudaMemcpy(boid_cell_indices_dev, boid_cell_indices_dptr, sizeof(behaviours::grid::boid_cell_index) * amount, cudaMemcpyDeviceToHost);
+	//std::vector<grid_bhvr::boid_cell_index> test_device(boid_cell_indices_dev, boid_cell_indices_dev + amount);
 	thrust::device_ptr<grid_bhvr::boid_cell_index> thr_bci(boid_cell_indices_dptr);
 	thrust::sort(thr_bci, thr_bci + amount, order_by_cell_id());
 	cudaMemcpy(boid_cell_indices_dev, boid_cell_indices_dptr, bci_size, cudaMemcpyDeviceToHost);

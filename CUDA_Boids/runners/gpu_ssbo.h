@@ -46,8 +46,8 @@ namespace utils::runners
 
 		// Grid-related fields
 		float grid_resolution;
-		behaviours::grid::boid_cell_index* boid_cell_indices_dptr; // aka bci
-		behaviours::grid::idx_range* cell_idx_range_dptr; // aka cir
+		behaviours::boid_cell_index* boid_cell_indices_dptr; // aka bci
+		behaviours::idx_range* cell_idx_range_dptr; // aka cir
 
 		cudaStream_t bci_stream, cir_stream;
 

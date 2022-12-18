@@ -2,9 +2,9 @@
 
 #include "behaviour_utils.h"
 
-namespace utils::runners::behaviours
+namespace utils::runners::behaviours::cpu
 {
-	namespace naive::cpu
+	namespace naive
 	{
 		inline float4 alignment(size_t current, float4* positions, float4* velocities, size_t amount, size_t max_radius)
 		{
@@ -77,7 +77,7 @@ namespace utils::runners::behaviours
 	}
 	namespace grid
 	{
-		namespace uniform::cpu
+		namespace uniform
 		{
 			inline float4 alignment(size_t current, float4* positions, float4* velocities, boid_cell_index* boid_cell_indices, int start, int end, size_t max_radius)
 			{
@@ -149,7 +149,7 @@ namespace utils::runners::behaviours
 				return utils::math::normalize_or_zero(separation);
 			}
 		}
-		namespace coherent::cpu
+		namespace coherent
 		{
 			inline float4 alignment(size_t current, float4* positions, float4* velocities, int* cell_ids, idx_range* cell_idx_ranges, size_t max_radius)
 			{

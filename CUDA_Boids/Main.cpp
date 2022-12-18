@@ -82,6 +82,7 @@ int main()
 		{
 			{ 100000 },//boid_amount
 			{ 100.f },//cube_size
+			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
 		},
 		{
 			{ 5.0f },//boid_speed

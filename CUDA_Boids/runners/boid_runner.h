@@ -12,12 +12,17 @@ namespace utils::runners
 	class boid_runner 
 	{
 	public:
+		enum simulation_type
+		{
+			NAIVE, UNIFORM_GRID, COHERENT_GRID
+		};
 		struct simulation_parameters
 		{
 			struct static_parameters
 			{
-				size_t boid_amount{ 100  };
-				float  cube_size  { 20.f };
+				size_t          boid_amount{ 100   };
+				float           cube_size  { 20.f  };
+				simulation_type sim_type   { NAIVE };
 			} static_params;
 			struct dynamic_parameters
 			{

@@ -3,7 +3,7 @@
 #include "../utils/utils.h"
 #include "../utils/CUDA/vector_math.h"
 
-namespace utils::runners::behaviours::grid
+namespace utils::runners::behaviours
 {
 	struct boid_cell_index
 	{
