@@ -80,9 +80,9 @@ int main()
 	utils::runners::boid_runner::simulation_parameters params
 	{
 		{
-			{ 100000 },//boid_amount
-			{ 100.f },//cube_size
-			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
+			{ 1 },//boid_amount
+			{ 20.f },//cube_size
+			{ utils::runners::boid_runner::simulation_type::NAIVE }, // simulation_type
 		},
 		{
 			{ 5.0f },//boid_speed
@@ -94,7 +94,7 @@ int main()
 		}
 	};
 
-	utils::runners::gpu_ssbo runner{ params };
+	utils::runners::cpu_ssbo runner{ params };
 	
 	// Visualization matrices setup for camera
 	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
@@ -160,7 +160,7 @@ int main()
 		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
 		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
 		//std::cout << "Calcs: " << delta_calculations << "ms | ";
-		//std::cout << "FPS: " << current_fps << "\n";
+		std::cout << "FPS: " << current_fps << "\n";
 
 		glfwSwapBuffers(glfw_window);
 	}

@@ -111,6 +111,62 @@ namespace utils::runners::behaviours::gpu
 
 			separations[current] = utils::math::normalize_or_zero(separation);
 		}
+	
+		inline __global__ void flock(float4* ssbo_positions, float4* ssbo_velocities, 
+			size_t amount, size_t max_radius,
+			utils::math::plane* borders,
+			utils::runners::boid_runner::simulation_parameters* simulation_params, const float delta_time)
+		{
+			size_t current = blockIdx.x * blockDim.x + threadIdx.x;
+			if (current >= amount) return;
+
+			float4 alignment{ 0 }, cohesion{ 0 }, separation{ 0 }, wall_separation{ 0 };
+			float4 baricenter{ 0 };
+			float counter{ 0 };
+			float4 repulsion{ 0 }; float repulsion_length2{ 0 };
+			float4 wall_repulsion{ 0 }; float wall_distance{ 0 };
+
+			bool in_radius, near_wall;
+
+			for (size_t i = 0; i < amount; i++)
+			{
+				in_radius = utils::math::distance2(ssbo_positions[current], ssbo_positions[i]) < max_radius * max_radius;
+
+				// alignment
+				alignment += ssbo_velocities[i] * in_radius;
+
+				// cohesion
+				baricenter += ssbo_positions[i] * in_radius;
+				counter += 1.f * in_radius;
+
+				// separation
+				repulsion = ssbo_positions[current] - ssbo_positions[i];
+				repulsion_length2 = utils::math::length2(repulsion);
+				separation += (repulsion / (repulsion_length2 + 0.0001f)) * in_radius;
+
+				// wall_separation
+				for (size_t b = 0; b < 6; b++)
+				{
+					wall_distance = utils::math::distance_point_plane(ssbo_positions[current], borders[b]) + 0.0001f;
+					near_wall = wall_distance < 1.f;
+					wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
+					wall_separation += wall_repulsion;
+				}
+			}
+			baricenter /= counter;
+			cohesion = baricenter - ssbo_positions[current];
+
+			float chs = simulation_params->static_params.cube_size / 2;
+
+			float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
+				+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
+				+ simulation_params->dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
+				+ simulation_params->dynamic_params.wall_separation_coeff * utils::math::normalize_or_zero(wall_separation);
+
+			ssbo_velocities[current] = utils::math::normalize_or_zero(ssbo_velocities[current] + accel_blend * delta_time); //v = u + at
+			ssbo_positions [current] += ssbo_velocities[current] * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
+			ssbo_positions [current] = clamp(ssbo_positions[current], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+		}
 	}
 
 	namespace grid
@@ -187,12 +243,69 @@ namespace utils::runners::behaviours::gpu
 
 				separations[current_boid.boid_id] = utils::math::normalize_or_zero(separation);
 			}
+		
+			inline __global__ void flock(float4* ssbo_positions, float4* ssbo_velocities, size_t amount,
+				boid_cell_index* boid_cell_indices, idx_range* cell_idx_ranges, size_t max_radius,
+				utils::math::plane* borders,
+				utils::runners::boid_runner::simulation_parameters* simulation_params, const float delta_time)
+			{
+				size_t current = blockIdx.x * blockDim.x + threadIdx.x;
+				if (current >= amount) return;
+
+				float4 alignment{ 0 }, cohesion{ 0 }, separation{ 0 }, wall_separation{ 0 };
+				float4 baricenter{ 0 };
+				float counter{ 0 };
+				float4 repulsion{ 0 }; float repulsion_length2{ 0 };
+				float4 wall_repulsion{ 0 }; float wall_distance{ 0 };
+
+				int current_neighbour;
+				boid_cell_index current_boid = boid_cell_indices[current];
+				idx_range range = cell_idx_ranges[current_boid.cell_id];
+				bool in_radius, near_wall;
+
+				for (size_t i = range.start; i < range.end; i++)
+				{
+					current_neighbour = boid_cell_indices[i].boid_id;
+					in_radius = utils::math::distance2(ssbo_positions[current_boid.boid_id], ssbo_positions[current_neighbour]) < max_radius * max_radius;
+
+					// alignment
+					alignment += ssbo_velocities[current_neighbour] * in_radius;
+
+					// cohesion
+					baricenter += ssbo_positions[current_neighbour] * in_radius;
+					counter += 1.f * in_radius;
+
+					// separation
+					repulsion = ssbo_positions[current_boid.boid_id] - ssbo_positions[current_neighbour];
+					repulsion_length2 = utils::math::length2(repulsion);
+					separation += (repulsion / (repulsion_length2 + 0.0001f)) * in_radius;
+
+					// wall_separation
+					for (size_t b = 0; b < 6; b++)
+					{
+						wall_distance = utils::math::distance_point_plane(ssbo_positions[current_boid.boid_id], borders[b]) + 0.0001f;
+						near_wall = wall_distance < 1.f;
+						wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
+						wall_separation += wall_repulsion;
+					}
+				}
+				baricenter /= counter;
+				cohesion = baricenter - ssbo_positions[current_boid.boid_id];
+
+				float chs = simulation_params->static_params.cube_size / 2;
+				float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
+					+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
+					+ simulation_params->dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
+					+ simulation_params->dynamic_params.wall_separation_coeff * utils::math::normalize_or_zero(wall_separation);
+
+				ssbo_velocities[current_boid.boid_id] = utils::math::normalize_or_zero(ssbo_velocities[current_boid.boid_id] + accel_blend * delta_time); //v = u + at
+				ssbo_positions [current_boid.boid_id] += ssbo_velocities[current_boid.boid_id] * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
+				ssbo_positions [current_boid.boid_id] = clamp(ssbo_positions[current_boid.boid_id], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+			}
 		}
 
 		namespace coherent
 		{
-			// TODO blender and wallseparation are the same for all gpu modes (naive, uniform or coherent), consider extracting it and generalizing it
-
 			inline __global__ void alignment(float4* alignments, float4* positions, float4* velocities, int* cell_ids, size_t amount, idx_range* cell_idx_ranges, size_t max_radius)
 			{
 				int current = blockIdx.x * blockDim.x + threadIdx.x;
@@ -254,6 +367,64 @@ namespace utils::runners::behaviours::gpu
 				}
 
 				separations[current] = utils::math::normalize_or_zero(separation);
+			}
+
+			// Single master behaviour including alignment, cohesion, separation and wall separation in one go: more efficient but less modular
+			inline __global__ void flock(float4* ssbo_positions, float4* ssbo_velocities, int* cell_ids, size_t amount,
+				idx_range* cell_idx_ranges, size_t max_radius, 
+				utils::math::plane* borders,
+				utils::runners::boid_runner::simulation_parameters* simulation_params, const float delta_time)
+			{
+				size_t current = blockIdx.x * blockDim.x + threadIdx.x;
+				if (current >= amount) return;
+
+				float4 alignment{ 0 }, cohesion{ 0 }, separation{ 0 }, wall_separation{ 0 };
+				float4 baricenter{ 0 };
+				float counter{ 0 };
+				float4 repulsion{ 0 }; float repulsion_length2{ 0 };
+				float4 wall_repulsion{ 0 }; float wall_distance{ 0 };
+
+				idx_range range = cell_idx_ranges[cell_ids[current]];
+				bool in_radius, near_wall;
+
+				for (size_t i = range.start; i < range.end; i++)
+				{
+					in_radius = utils::math::distance2(ssbo_positions[current], ssbo_positions[i]) < max_radius * max_radius;
+
+					// alignment
+					alignment += ssbo_velocities[i] * in_radius;
+
+					// cohesion
+					baricenter += ssbo_positions[i] * in_radius;
+					counter += 1.f * in_radius;
+
+					// separation
+					repulsion = ssbo_positions[current] - ssbo_positions[i];
+					repulsion_length2 = utils::math::length2(repulsion);
+					separation += (repulsion / (repulsion_length2 + 0.0001f)) * in_radius;
+
+					// wall_separation
+					for (size_t b = 0; b < 6; b++)
+					{
+						wall_distance = utils::math::distance_point_plane(ssbo_positions[current], borders[b]) + 0.0001f;
+						near_wall = wall_distance < 1.f;
+						wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
+						wall_separation += wall_repulsion;
+					}
+				}
+				baricenter /= counter;
+				cohesion = baricenter - ssbo_positions[current];
+
+				float chs = simulation_params->static_params.cube_size / 2;
+
+				float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
+					+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
+					+ simulation_params->dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
+					+ simulation_params->dynamic_params.wall_separation_coeff * utils::math::normalize_or_zero(wall_separation);
+
+				ssbo_velocities[current] = utils::math::normalize_or_zero(ssbo_velocities[current] + accel_blend * delta_time); //v = u + at
+				ssbo_positions [current] += ssbo_velocities[current] * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
+				ssbo_positions [current] = clamp(ssbo_positions[current], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
 			}
 		}
 	}
