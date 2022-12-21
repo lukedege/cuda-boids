@@ -119,7 +119,7 @@ void opengl_main()
 void plane_test()
 {
 	float cube_size = 10;
-	float4 boid = { -1,3,9,0 };
+	float4 boid = { -1,3,9.9f,0 };
 	utils::math::plane zp{ { 0,0, cube_size,0 }, { 0,0,-1,0 } };
 	utils::math::plane zm{ { 0,0,-cube_size,0 }, { 0,0, 1,0 } };
 	utils::math::plane xp{ {  cube_size,0,0,0 }, { -1,0,0,0 } };
@@ -217,10 +217,8 @@ void gpu_ssbo::uniform_grid_calculation(const float delta_time)
 
 
 int mainz()
-{	
-	//size_t size = 10;
-	//std::vector<float4> pos(100);
-	//utils::cuda::containers::random_vec4_fill_hptr(pos.data(), pos.size(), -5, 5);
-	
+{
+	plane_test();
+
 	return 0;
 }

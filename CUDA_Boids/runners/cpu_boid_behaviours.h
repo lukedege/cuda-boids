@@ -4,6 +4,25 @@
 
 namespace utils::runners::behaviours::cpu
 {
+	inline float4 wall_separation(size_t current, float4* positions, utils::math::plane* borders)
+	{
+		float4 separation{ 0 };
+		float4 repulsion;
+		float distance;
+		float near_wall;
+
+		// wall check
+		for (size_t b = 0; b < 6; b++)
+		{
+			distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
+			near_wall = distance < 1.f;
+			repulsion = (borders[b].normal / abs(distance)) * near_wall;
+			separation += repulsion;
+		}
+
+		return utils::math::normalize_or_zero(separation);
+	}
+
 	namespace naive
 	{
 		inline float4 alignment(size_t current, float4* positions, float4* velocities, size_t amount, size_t max_radius)
@@ -55,25 +74,8 @@ namespace utils::runners::behaviours::cpu
 
 			return utils::math::normalize_or_zero(separation);
 		}
-
-		inline float4 wall_separation(size_t current, float4* positions, utils::math::plane* borders, size_t amount)
-		{
-			float4 separation{ 0 };
-			float4 repulsion;
-			float distance;
-			float near_wall;
-			// wall check
-			for (size_t b = 0; b < 6; b++)
-			{
-				distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-				near_wall = distance < 1.f;
-				repulsion = (borders[b].normal / abs(distance)) * near_wall;
-				separation += repulsion;
-			}
-
-
-			return utils::math::normalize_or_zero(separation);
-		}
+		
+		// TODO flock like in gpu
 	}
 	namespace grid
 	{
@@ -131,23 +133,8 @@ namespace utils::runners::behaviours::cpu
 				}
 				return utils::math::normalize_or_zero(separation);
 			}
-
-			inline float4 wall_separation(size_t current, float4* positions, utils::math::plane* borders)
-			{
-				float4 separation{ 0 };
-				float4 repulsion;
-				float distance;
-				float near_wall;
-				for (size_t b = 0; b < 6; b++)
-				{
-					distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-					near_wall = distance < 1.f;
-					repulsion = (borders[b].normal / abs(distance)) * near_wall;
-					separation += repulsion;
-				}
-
-				return utils::math::normalize_or_zero(separation);
-			}
+		
+			// TODO flock like in gpu
 		}
 		namespace coherent
 		{
@@ -206,23 +193,8 @@ namespace utils::runners::behaviours::cpu
 				}
 				return utils::math::normalize_or_zero(separation);
 			}
-
-			inline float4 wall_separation(size_t current, float4* positions, utils::math::plane* borders)
-			{
-				float4 separation{ 0 };
-				float4 repulsion;
-				float distance;
-				float near_wall;
-				for (size_t b = 0; b < 6; b++)
-				{
-					distance = utils::math::distance_point_plane(positions[current], borders[b]) + 0.0001f;
-					near_wall = distance < 1.f;
-					repulsion = (borders[b].normal / abs(distance)) * near_wall;
-					separation += repulsion;
-				}
-
-				return utils::math::normalize_or_zero(separation);
-			}
+		
+			// TODO flock like in gpu
 		}
 	}
 }

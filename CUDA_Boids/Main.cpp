@@ -33,6 +33,7 @@ void mouse_pos_callback(GLFWwindow* window, double x_pos, double y_pos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mode);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void process_keys(ugl::window& window, GLfloat delta_time);
+void calculate_breath_parameters(utils::runners::boid_runner::simulation_parameters& params, float speed, float amplitude);
 
 GLfloat mouse_last_x, mouse_last_y, x_offset, y_offset;
 bool left_mouse_pressed;
@@ -80,25 +81,29 @@ int main()
 	utils::runners::boid_runner::simulation_parameters params
 	{
 		{
-			{ 1 },//boid_amount
-			{ 20.f },//cube_size
-			{ utils::runners::boid_runner::simulation_type::NAIVE }, // simulation_type
+			{ 100000 },//boid_amount
+			{ 200.f },//cube_size
+			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
 		},
 		{
 			{ 5.0f },//boid_speed
-			{ 3    },//boid_fov
+			{ 3   },//boid_fov
 			{ 1.0f },//alignment_coeff
 			{ 0.8f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
 			{ 10.0f },//wall_separation_coeff
 		}
 	};
+	bool  breath_enabled   = false;
+	float breath_speed     = 1.f;
+	float breath_amplitude = 0.25f;
 
-	utils::runners::cpu_ssbo runner{ params };
+	utils::runners::gpu_ssbo runner{ params };
 	
 	// Visualization matrices setup for camera
 	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
 	glm::mat4 view_matrix = glm::mat4(1);
+	camera.update_distance(params.static_params.cube_size * 1.2f);
 
 	// Measurements variables setup
 	GLfloat delta_time = 0.0f, last_frame = 0.0f, current_fps = 0.0f;
@@ -140,12 +145,15 @@ int main()
 		ImGui::NewFrame();
 
 		ImGui::Begin("Boid settings");
-		ImGui::SliderFloat("Boid Speed"     , &params.dynamic_params.boid_speed           , 0, 10);
-		ImGui::SliderInt  ("Boid Fov"       , &params.dynamic_params.boid_fov             , 1, 20);
-		ImGui::SliderFloat("Alignment"      , &params.dynamic_params.alignment_coeff      , 0, 5);
-		ImGui::SliderFloat("Cohesion"       , &params.dynamic_params.cohesion_coeff       , 0, 5);
-		ImGui::SliderFloat("Separation"     , &params.dynamic_params.separation_coeff     , 0, 5);
-		ImGui::SliderFloat("Wall Separation", &params.dynamic_params.wall_separation_coeff, 0, 20);
+		ImGui::SliderFloat("Boid Speed"      , &params.dynamic_params.boid_speed           , 0, 30, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderInt  ("Boid Fov"        , &params.dynamic_params.boid_fov             , 1, 20, "%d", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Alignment"       , &params.dynamic_params.alignment_coeff      , 0, 5 , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Cohesion"        , &params.dynamic_params.cohesion_coeff       , 0, 5 , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Separation"      , &params.dynamic_params.separation_coeff     , 0, 5 , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Wall Separation" , &params.dynamic_params.wall_separation_coeff, 0, 20, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::Checkbox   ("Breath Effect"   , &breath_enabled);
+		ImGui::SliderFloat("Breath Speed"    , &breath_speed    , 0, 5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Breath Amplitude", &breath_amplitude, 0, 1, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::End();
 
 		// Renders the ImGUI elements
@@ -153,6 +161,7 @@ int main()
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		// Update parameters changed through imgui
+		if (breath_enabled) calculate_breath_parameters(params, breath_speed, breath_amplitude);;
 		runner.set_dynamic_simulation_parameters(params.dynamic_params);
 
 		// Update performance measurements
@@ -160,7 +169,7 @@ int main()
 		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
 		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
 		//std::cout << "Calcs: " << delta_calculations << "ms | ";
-		std::cout << "FPS: " << current_fps << "\n";
+		//std::cout << "FPS: " << current_fps << "\n";
 
 		glfwSwapBuffers(glfw_window);
 	}
@@ -226,4 +235,11 @@ void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	zoom -= yoffset;
 	zoom = std::clamp(zoom, 0.1f, 1000.0f);
 	camera.update_distance(zoom);
+}
+
+void calculate_breath_parameters(utils::runners::boid_runner::simulation_parameters& params, float speed, float amplitude)
+{
+	float time = glfwGetTime();
+	params.dynamic_params.cohesion_coeff   = 1.f - ((cos(time * speed) + 1) * amplitude / 2.f);
+	params.dynamic_params.separation_coeff = 1.f - ((sin(time * speed) + 1) * amplitude / 2.f);
 }

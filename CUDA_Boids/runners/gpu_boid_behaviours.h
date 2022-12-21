@@ -127,6 +127,8 @@ namespace utils::runners::behaviours::gpu
 			float4 wall_repulsion{ 0 }; float wall_distance{ 0 };
 
 			bool in_radius, near_wall;
+			float chs = simulation_params->static_params.cube_size / 2; //chs -> cube half size
+			float wall_repel_distance = 1 + (chs * 2) * .01f;
 
 			for (size_t i = 0; i < amount; i++)
 			{
@@ -148,15 +150,13 @@ namespace utils::runners::behaviours::gpu
 				for (size_t b = 0; b < 6; b++)
 				{
 					wall_distance = utils::math::distance_point_plane(ssbo_positions[current], borders[b]) + 0.0001f;
-					near_wall = wall_distance < 1.f;
+					near_wall = wall_distance < wall_repel_distance;
 					wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
 					wall_separation += wall_repulsion;
 				}
 			}
 			baricenter /= counter;
 			cohesion = baricenter - ssbo_positions[current];
-
-			float chs = simulation_params->static_params.cube_size / 2;
 
 			float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
 				+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
@@ -262,6 +262,8 @@ namespace utils::runners::behaviours::gpu
 				boid_cell_index current_boid = boid_cell_indices[current];
 				idx_range range = cell_idx_ranges[current_boid.cell_id];
 				bool in_radius, near_wall;
+				float chs = simulation_params->static_params.cube_size / 2; //chs -> cube half size
+				float wall_repel_distance = 1 + (chs * 2) * .01f;
 
 				for (size_t i = range.start; i < range.end; i++)
 				{
@@ -284,7 +286,7 @@ namespace utils::runners::behaviours::gpu
 					for (size_t b = 0; b < 6; b++)
 					{
 						wall_distance = utils::math::distance_point_plane(ssbo_positions[current_boid.boid_id], borders[b]) + 0.0001f;
-						near_wall = wall_distance < 1.f;
+						near_wall = wall_distance < wall_repel_distance;
 						wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
 						wall_separation += wall_repulsion;
 					}
@@ -292,7 +294,6 @@ namespace utils::runners::behaviours::gpu
 				baricenter /= counter;
 				cohesion = baricenter - ssbo_positions[current_boid.boid_id];
 
-				float chs = simulation_params->static_params.cube_size / 2;
 				float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
 					+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
 					+ simulation_params->dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
@@ -386,6 +387,8 @@ namespace utils::runners::behaviours::gpu
 
 				idx_range range = cell_idx_ranges[cell_ids[current]];
 				bool in_radius, near_wall;
+				float chs = simulation_params->static_params.cube_size / 2; //chs -> cube half size
+				float wall_repel_distance = 1 + (chs * 2) * .01f;
 
 				for (size_t i = range.start; i < range.end; i++)
 				{
@@ -407,15 +410,13 @@ namespace utils::runners::behaviours::gpu
 					for (size_t b = 0; b < 6; b++)
 					{
 						wall_distance = utils::math::distance_point_plane(ssbo_positions[current], borders[b]) + 0.0001f;
-						near_wall = wall_distance < 1.f;
+						near_wall = wall_distance < wall_repel_distance;
 						wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
 						wall_separation += wall_repulsion;
 					}
 				}
 				baricenter /= counter;
 				cohesion = baricenter - ssbo_positions[current];
-
-				float chs = simulation_params->static_params.cube_size / 2;
 
 				float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
 					+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)

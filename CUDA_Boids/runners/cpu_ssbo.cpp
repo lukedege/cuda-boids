@@ -30,16 +30,16 @@ namespace utils::runners
 
 	void cpu_ssbo::naive_calculation(const float delta_time)
 	{
-		namespace n_bhvr = behaviours::cpu::naive;
+		namespace cpu_bhvr = behaviours::cpu;
 		float4 accel_blend;
 		float chs = sim_params.static_params.cube_size / 2;
 		float boid_fov = sim_params.dynamic_params.boid_fov;
 		for (size_t i = 0; i < amount; i++)
 		{
-			accel_blend = sim_params.dynamic_params.alignment_coeff       * n_bhvr::alignment(i, positions.data(), velocities.data(), amount, boid_fov)
-						+ sim_params.dynamic_params.cohesion_coeff        * n_bhvr::cohesion(i, positions.data(), amount, boid_fov)
-						+ sim_params.dynamic_params.separation_coeff      * n_bhvr::separation(i, positions.data(), amount, boid_fov)
-						+ sim_params.dynamic_params.wall_separation_coeff * n_bhvr::wall_separation(i, positions.data(), sim_volume.data(), amount);
+			accel_blend = sim_params.dynamic_params.alignment_coeff       * cpu_bhvr::naive::alignment  (i, positions.data(), velocities.data(), amount, boid_fov)
+						+ sim_params.dynamic_params.cohesion_coeff        * cpu_bhvr::naive::cohesion   (i, positions.data(), amount, boid_fov)
+						+ sim_params.dynamic_params.separation_coeff      * cpu_bhvr::naive::separation (i, positions.data(), amount, boid_fov)
+						+ sim_params.dynamic_params.wall_separation_coeff * cpu_bhvr::wall_separation   (i, positions.data(), sim_volume.data());
 
 			//velocities[i] = normalize(velocities[i]) + normalize(accel_blend) * delta_time; //v = u + at
 			velocities[i] = utils::math::normalize_or_zero(velocities[i] + accel_blend * delta_time); //v = u + at
@@ -107,32 +107,32 @@ namespace utils::runners
 
 	void cpu_ssbo::uniform_grid_calculation(const float delta_time)
 	{
-		namespace grid_bhvr = behaviours;
+		namespace bhvr = behaviours;
 
 		float boid_fov = sim_params.dynamic_params.boid_fov;
 		float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
 		float grid_resolution = sim_params.static_params.cube_size / cell_size;
 		
 		// 2) create a "grid" and localize each boid inside of it with a linear index
-		std::vector<grid_bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
+		std::vector<bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
 		
 		// 3) sort the boids according to their cell's linear index 
-		auto order_by_cell_id = [](const grid_bhvr::boid_cell_index& a, const grid_bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
+		auto order_by_cell_id = [](const bhvr::boid_cell_index& a, const bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
 		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), order_by_cell_id);
 		
 		// 4) calculate "start" and "end" indices for each cell (to find the range of adjacent, same-cell boids)
-		std::vector<grid_bhvr::idx_range> cell_idx_range{ find_cell_boid_range(boid_cell_indices.data(), amount, grid_resolution) };
+		std::vector<bhvr::idx_range> cell_idx_range{ find_cell_boid_range(boid_cell_indices.data(), amount, grid_resolution) };
 
 		// 5) calcola le velocità usando solo quella cella come neighborhood
 		float4 accel_blend;
 		float chs = sim_params.static_params.cube_size / 2 - 0.0001f;
 		for (size_t i = 0; i < amount; i++)
 		{
-			grid_bhvr::boid_cell_index current = boid_cell_indices[i];
-			accel_blend = sim_params.dynamic_params.alignment_coeff       * grid_bhvr::cpu::grid::uniform::alignment      (current.boid_id, positions.data(), velocities.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, boid_fov)
-						+ sim_params.dynamic_params.cohesion_coeff        * grid_bhvr::cpu::grid::uniform::cohesion       (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, boid_fov)
-						+ sim_params.dynamic_params.separation_coeff      * grid_bhvr::cpu::grid::uniform::separation     (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, boid_fov)
-						+ sim_params.dynamic_params.wall_separation_coeff * grid_bhvr::cpu::grid::uniform::wall_separation(current.boid_id, positions.data(), sim_volume.data());
+			bhvr::boid_cell_index current = boid_cell_indices[i];
+			accel_blend = sim_params.dynamic_params.alignment_coeff       * bhvr::cpu::grid::uniform::alignment  (current.boid_id, positions.data(), velocities.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, boid_fov)
+						+ sim_params.dynamic_params.cohesion_coeff        * bhvr::cpu::grid::uniform::cohesion   (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, boid_fov)
+						+ sim_params.dynamic_params.separation_coeff      * bhvr::cpu::grid::uniform::separation (current.boid_id, positions.data(), boid_cell_indices.data(), cell_idx_range[current.cell_id].start, cell_idx_range[current.cell_id].end, boid_fov)
+						+ sim_params.dynamic_params.wall_separation_coeff * bhvr::cpu::wall_separation           (current.boid_id, positions.data(), sim_volume.data());
 
 			velocities[current.boid_id] = utils::math::normalize_or_zero(velocities[current.boid_id] + accel_blend * delta_time); //v = u + at
 			positions [current.boid_id] += velocities[current.boid_id] * sim_params.dynamic_params.boid_speed * delta_time; //s = vt
@@ -145,17 +145,17 @@ namespace utils::runners
 
 	void cpu_ssbo::coherent_grid_calculation(const float delta_time)
 	{
-		namespace grid_bhvr = behaviours;
+		namespace bhvr = behaviours;
 
 		float boid_fov = sim_params.dynamic_params.boid_fov;
 		float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
 		float grid_resolution = sim_params.static_params.cube_size / cell_size;
 		
 		// 2) create a "grid" and localize each boid inside of it with a linear index
-		std::vector<grid_bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
+		std::vector<bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
 		
 		// 3) ordina l'array di boid secondo la loro posizione di griglia(scattered=ordina solo il boid index, coherent = ordina pure velocities e positions)
-		auto order_by_cell_id = [](const grid_bhvr::boid_cell_index& a, const grid_bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
+		auto order_by_cell_id = [](const bhvr::boid_cell_index& a, const bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
 		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), order_by_cell_id);
 		
 		std::vector<float4> new_vel(amount), new_pos(amount);
@@ -171,17 +171,17 @@ namespace utils::runners
 		positions = new_pos;
 		
 		// 4) calcola "start" e "end" di ogni cella della griglia(ovvero il range di indici uguali dei boid adiacenti)
-		std::vector<grid_bhvr::idx_range> cell_idx_range{ find_cell_boid_range(boid_cell_indices.data(), amount, grid_resolution) };
+		std::vector<bhvr::idx_range> cell_idx_range{ find_cell_boid_range(boid_cell_indices.data(), amount, grid_resolution) };
 
 		// 5) calcola le velocità usando solo quella cella come neighborhood
 		float4 accel_blend;
 		float chs = sim_params.static_params.cube_size / 2 - 0.0001f; 
 		for (size_t i = 0; i < amount; i++)
 		{
-			accel_blend = sim_params.dynamic_params.alignment_coeff       * grid_bhvr::cpu::grid::coherent::alignment      (i, positions.data(), velocities.data(), cell_ids.data(), cell_idx_range.data(), boid_fov)
-						+ sim_params.dynamic_params.cohesion_coeff        * grid_bhvr::cpu::grid::coherent::cohesion       (i, positions.data(), cell_ids.data(), cell_idx_range.data(), boid_fov)
-						+ sim_params.dynamic_params.separation_coeff      * grid_bhvr::cpu::grid::coherent::separation     (i, positions.data(), cell_ids.data(), cell_idx_range.data(), boid_fov)
-						+ sim_params.dynamic_params.wall_separation_coeff * grid_bhvr::cpu::grid::coherent::wall_separation(i, positions.data(), sim_volume.data());
+			accel_blend = sim_params.dynamic_params.alignment_coeff       * bhvr::cpu::grid::coherent::alignment  (i, positions.data(), velocities.data(), cell_ids.data(), cell_idx_range.data(), boid_fov)
+						+ sim_params.dynamic_params.cohesion_coeff        * bhvr::cpu::grid::coherent::cohesion   (i, positions.data(), cell_ids.data(), cell_idx_range.data(), boid_fov)
+						+ sim_params.dynamic_params.separation_coeff      * bhvr::cpu::grid::coherent::separation (i, positions.data(), cell_ids.data(), cell_idx_range.data(), boid_fov)
+						+ sim_params.dynamic_params.wall_separation_coeff * bhvr::cpu::wall_separation            (i, positions.data(), sim_volume.data());
 
 			velocities[i] = utils::math::normalize_or_zero(velocities[i] + accel_blend * delta_time); //v = u + at
 			positions [i] += velocities[i] * sim_params.dynamic_params.boid_speed * delta_time; //s = vt
@@ -198,10 +198,13 @@ namespace utils::runners
 		{
 		case NAIVE:
 			naive_calculation(delta_time);
+			break;
 		case UNIFORM_GRID:
 			uniform_grid_calculation(delta_time);
+			break;
 		case COHERENT_GRID:
 			coherent_grid_calculation(delta_time);
+			break;
 		}
 	}
 

@@ -164,7 +164,7 @@ namespace utils::runners
 	
 	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
 	{
-		namespace grid_bhvr = behaviours;
+		namespace bhvr = behaviours;
 
 		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
 
@@ -178,7 +178,7 @@ namespace utils::runners
 		cudaDeviceSynchronize();
 
 		// Sort boids by grid index
-		thrust::device_ptr<grid_bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
+		thrust::device_ptr<bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
 		thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
 
 		// Find ranges for boids living in the same grid cell
@@ -186,13 +186,13 @@ namespace utils::runners
 		cudaDeviceSynchronize();
 
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		grid_bhvr::gpu::grid::uniform::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov, sim_volume_dptr, sim_params_dptr, delta_time);
+		bhvr::gpu::grid::uniform::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov, sim_volume_dptr, sim_params_dptr, delta_time);
 		cudaDeviceSynchronize();
 	}
 
 	void gpu_ssbo::coherent_grid_calculation(const float delta_time) 
 	{
-		namespace grid_bhvr = behaviours;
+		namespace bhvr = behaviours;
 
 		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
 
@@ -206,7 +206,7 @@ namespace utils::runners
 		cudaDeviceSynchronize();
 
 		// Sort boids by grid index
-		thrust::device_ptr<grid_bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
+		thrust::device_ptr<bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
 		thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
 
 		// Reorder vel/pos in another array
@@ -223,21 +223,24 @@ namespace utils::runners
 		cudaDeviceSynchronize();
 
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		grid_bhvr::gpu::grid::coherent::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov, sim_volume_dptr, sim_params_dptr, delta_time);
+		bhvr::gpu::grid::coherent::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, cell_indices_aux_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov, sim_volume_dptr, sim_params_dptr, delta_time);
 		cudaDeviceSynchronize();
 	}
 
-	// TODO see if you can make this template and not check every loop the condition (sim_type aint gonna change) (https://stackoverflow.com/questions/56742898/avoid-checking-the-same-condition-every-step-in-a-loop-in-c)
+	// TODO see if you can make this template and not check every loop the condition (sim_type aint gonna change during runtime) (https://stackoverflow.com/questions/56742898/avoid-checking-the-same-condition-every-step-in-a-loop-in-c)
 	void gpu_ssbo::calculate(const float delta_time)
 	{
 		switch (sim_params.static_params.sim_type)
 		{
 		case NAIVE:
 			naive_calculation(delta_time);
+			break;
 		case UNIFORM_GRID:
 			uniform_grid_calculation(delta_time);
+			break;
 		case COHERENT_GRID:
 			coherent_grid_calculation(delta_time);
+			break;
 		}
 	}
 
