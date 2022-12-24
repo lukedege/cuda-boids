@@ -2,6 +2,7 @@
 log.txt
 vulkan_log.txt
 *.ini
+minimal_test_suite
 ## CUSTOM END ##
 
 ## Ignore Visual Studio temporary files, build results, and
