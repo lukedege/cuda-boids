@@ -42,12 +42,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\CUDA_samples_utils\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\..\..\Libraries\glfw\include;..\..\..\Libraries\glm;..\..\..\Libraries\glad;..\..\..\Libraries\imgui-1.88;..\..\..\Libraries\imgui-1.88\backends;..\..\..\Libraries\CUDA_samples_utils\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\..\..\Libraries\glfw\lib-vc2022;..\..\..\Libraries\various;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <SourcePath>..\..\..\Libraries\glad;$(VC_SourcePath);</SourcePath>
     <LinkIncremental>true</LinkIncremental>
@@ -102,12 +102,9 @@
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalOptions>-std=c++17 %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
+      <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CudaCompile Include="old_main.cpp" />
-    <CudaCompile Include="old_main2.cpp" />
-  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="runners\behaviour_utils.h" />
     <ClInclude Include="runners\cpu_boid_behaviours.h" />

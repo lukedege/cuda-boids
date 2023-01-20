@@ -67,6 +67,12 @@ namespace utils::runners
 			setup_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 2, 0);
 		}
 
+		~boid_runner()
+		{
+			boid_shader .del();
+			debug_shader.del();
+		}
+
 		inline std::array<utils::math::plane, 6> reset_volume()
 		{
 			float val = sim_params.static_params.cube_size * 0.5f;

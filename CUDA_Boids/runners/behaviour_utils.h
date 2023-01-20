@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../utils/utils.h"
+#include "../utils/CUDA/cuda_utils.h"
 #include "../utils/CUDA/vector_math.h"
 
 namespace utils::runners::behaviours
@@ -11,7 +12,7 @@ namespace utils::runners::behaviours
 		int cell_id;
 	};
 
-	struct idx_range
+	struct idx_range // TODO to remove because of bas AoS pattern
 	{
 		int start{ 0 }; //inclusive
 		int end{ 0 }; //exclusive

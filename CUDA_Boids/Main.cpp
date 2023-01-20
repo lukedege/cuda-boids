@@ -86,8 +86,8 @@ int main()
 			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
 		},
 		{
-			{ 5.0f },//boid_speed
-			{ 3   },//boid_fov
+			{ 20.0f },//boid_speed
+			{ 20   },//boid_fov
 			{ 1.0f },//alignment_coeff
 			{ 0.8f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
@@ -110,6 +110,7 @@ int main()
 	GLfloat before_calculations = 0.0f, after_calculations = 0.0f, delta_calculations = 0.0f;
 	GLfloat avg_calc = 1.f, avg_fps = 1.f;
 	GLfloat alpha = 0.9;
+	GLfloat max_fov = params.static_params.cube_size / 2; 
 	std::cout << std::setprecision(4) << std::fixed;
 
 	// Main loop
@@ -145,12 +146,12 @@ int main()
 		ImGui::NewFrame();
 
 		ImGui::Begin("Boid settings");
-		ImGui::SliderFloat("Boid Speed"      , &params.dynamic_params.boid_speed           , 0, 30, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::SliderInt  ("Boid Fov"        , &params.dynamic_params.boid_fov             , 1, 20, "%d", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::SliderFloat("Alignment"       , &params.dynamic_params.alignment_coeff      , 0, 5 , "%.3f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::SliderFloat("Cohesion"        , &params.dynamic_params.cohesion_coeff       , 0, 5 , "%.3f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::SliderFloat("Separation"      , &params.dynamic_params.separation_coeff     , 0, 5 , "%.3f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::SliderFloat("Wall Separation" , &params.dynamic_params.wall_separation_coeff, 0, 20, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Boid Speed"      , &params.dynamic_params.boid_speed           , 0, 50     , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderInt  ("Boid Fov"        , &params.dynamic_params.boid_fov             , 1, max_fov, "%d"  , ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Alignment"       , &params.dynamic_params.alignment_coeff      , 0, 5      , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Cohesion"        , &params.dynamic_params.cohesion_coeff       , 0, 5      , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Separation"      , &params.dynamic_params.separation_coeff     , 0, 5      , "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::SliderFloat("Wall Separation" , &params.dynamic_params.wall_separation_coeff, 0, 20     , "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::Checkbox   ("Breath Effect"   , &breath_enabled);
 		ImGui::SliderFloat("Breath Speed"    , &breath_speed    , 0, 5, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 		ImGui::SliderFloat("Breath Amplitude", &breath_amplitude, 0, 1, "%.3f", ImGuiSliderFlags_AlwaysClamp);

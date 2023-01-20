@@ -6,6 +6,8 @@
 #include "behaviour_utils.h"
 #include "boid_runner.h"
 
+extern __constant__ utils::math::plane sim_volume_cdptr[6];
+
 namespace utils::runners::behaviours::gpu
 {
 	inline __global__ void wall_separation(float4* wall_separations, float4* positions, utils::math::plane* borders, size_t amount)
@@ -311,18 +313,25 @@ namespace utils::runners::behaviours::gpu
 			{
 				int current = blockIdx.x * blockDim.x + threadIdx.x;
 				if (current >= amount) return; // avoid threads ids overflowing the array
-
+			
 				float4 alignment{ 0 };
 				idx_range range = cell_idx_ranges[cell_ids[current]];
 				bool in_radius;
+
+				//size_t range_diff = range.end - range.start;
+				//float4* cell_positions = (float4*)malloc(sizeof(float4) * 1);
+				//memcpy(cell_positions, positions, sizeof(float4) * 1);
+				//free(cell_positions);
+
 				for (size_t i = range.start; i < range.end; i++)
 				{
 					in_radius = utils::math::distance2(positions[current], positions[i]) < max_radius * max_radius;
 					// condition as multiplier avoids warp divergence
 					alignment += velocities[i] * in_radius;
 				}
-
+			
 				alignments[current] = utils::math::normalize_or_zero(alignment);
+				
 			}
 
 			inline __global__ void cohesion(float4* cohesions, float4* positions, int* cell_ids, size_t amount, idx_range* cell_idx_ranges, size_t max_radius)
@@ -370,62 +379,101 @@ namespace utils::runners::behaviours::gpu
 				separations[current] = utils::math::normalize_or_zero(separation);
 			}
 
-			// Single master behaviour including alignment, cohesion, separation and wall separation in one go: more efficient but less modular
-			inline __global__ void flock(float4* ssbo_positions, float4* ssbo_velocities, int* cell_ids, size_t amount,
-				idx_range* cell_idx_ranges, size_t max_radius, 
-				utils::math::plane* borders,
-				utils::runners::boid_runner::simulation_parameters* simulation_params, const float delta_time)
+			// Single master behaviour including alignment, cohesion, separation and wall separation in one go: 
+			// not modular but more efficient than separate behaviours because requires less global memory loads
+			inline __global__ void flock(float4* ssbo_positions, float4* ssbo_velocities, 
+				float4* sorted_positions, float4* sorted_velocities, int* cell_ids, size_t amount,
+				int* cell_idx_range_start_dptr, int* cell_idx_range_end_dptr, size_t max_radius,
+				//utils::math::plane* borders, // TODO THIS CAN GO IN constant memory SMEM
+				utils::runners::boid_runner::simulation_parameters* simulation_params, // TODO THIS CAN GO IN SMEM
+				const float delta_time)
 			{
 				size_t current = blockIdx.x * blockDim.x + threadIdx.x;
 				if (current >= amount) return;
 
 				float4 alignment{ 0 }, cohesion{ 0 }, separation{ 0 }, wall_separation{ 0 };
-				float4 baricenter{ 0 };
+				//float4 baricenter{ 0 };
 				float counter{ 0 };
 				float4 repulsion{ 0 }; float repulsion_length2{ 0 };
-				float4 wall_repulsion{ 0 }; float wall_distance{ 0 };
+				float wall_distance{ 0 };
 
-				idx_range range = cell_idx_ranges[cell_ids[current]];
+				int boid_cell = cell_ids[current];
+				int range_start = cell_idx_range_start_dptr[boid_cell], range_end = cell_idx_range_end_dptr[boid_cell];
 				bool in_radius, near_wall;
-				float chs = simulation_params->static_params.cube_size / 2; //chs -> cube half size
+				utils::runners::boid_runner::simulation_parameters sim_params = *simulation_params; 
+				float chs = sim_params.static_params.cube_size / 2; //chs -> cube half size
 				float wall_repel_distance = 1 + (chs * 2) * .01f;
 
-				for (size_t i = range.start; i < range.end; i++)
+				float4 position_current = sorted_positions[current], position_i;
+				float4 new_position, new_velocity;
+
+				for (size_t i = range_start; i < range_end; i++)
 				{
-					in_radius = utils::math::distance2(ssbo_positions[current], ssbo_positions[i]) < max_radius * max_radius;
+					position_i = sorted_positions[i];
+					in_radius = utils::math::distance2(position_current, position_i) < max_radius * max_radius;
 
 					// alignment
-					alignment += ssbo_velocities[i] * in_radius;
+					alignment += sorted_velocities[i] * in_radius;
 
 					// cohesion
-					baricenter += ssbo_positions[i] * in_radius;
+					cohesion += position_i * in_radius;
 					counter += 1.f * in_radius;
 
 					// separation
-					repulsion = ssbo_positions[current] - ssbo_positions[i];
+					repulsion = position_current - position_i;
 					repulsion_length2 = utils::math::length2(repulsion);
 					separation += (repulsion / (repulsion_length2 + 0.0001f)) * in_radius;
 
 					// wall_separation
 					for (size_t b = 0; b < 6; b++)
 					{
-						wall_distance = utils::math::distance_point_plane(ssbo_positions[current], borders[b]) + 0.0001f;
+						wall_distance = utils::math::distance_point_plane(position_current, sim_volume_cdptr[b]) + 0.0001f;
 						near_wall = wall_distance < wall_repel_distance;
-						wall_repulsion = (borders[b].normal / abs(wall_distance)) * near_wall;
-						wall_separation += wall_repulsion;
+						wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall; //wall repulsion calculation
 					}
 				}
-				baricenter /= counter;
-				cohesion = baricenter - ssbo_positions[current];
+				cohesion /= counter;
+				cohesion = cohesion - position_current;
 
-				float4 accel_blend = simulation_params->dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
-					+ simulation_params->dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
-					+ simulation_params->dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
-					+ simulation_params->dynamic_params.wall_separation_coeff * utils::math::normalize_or_zero(wall_separation);
+				float4 accel_blend = sim_params.dynamic_params.alignment_coeff * utils::math::normalize_or_zero(alignment)
+					+ sim_params.dynamic_params.cohesion_coeff * utils::math::normalize_or_zero(cohesion)
+					+ sim_params.dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
+					+ sim_params.dynamic_params.wall_separation_coeff * utils::math::normalize_or_zero(wall_separation);
 
-				ssbo_velocities[current] = utils::math::normalize_or_zero(ssbo_velocities[current] + accel_blend * delta_time); //v = u + at
-				ssbo_positions [current] += ssbo_velocities[current] * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
-				ssbo_positions [current] = clamp(ssbo_positions[current], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+				new_velocity = utils::math::normalize_or_zero(sorted_velocities[current] + accel_blend * delta_time); //v = u + at
+				new_position = position_current + new_velocity * sim_params.dynamic_params.boid_speed * delta_time; //s = vt
+				new_position = clamp(new_position, { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+
+				ssbo_velocities[current] = new_velocity;
+				ssbo_positions [current] = new_position;
+				// TODO check with nvprof if better idk
+				//ssbo_velocities[current] = utils::math::normalize_or_zero(ssbo_velocities[current] + accel_blend * delta_time); //v = u + at
+				//ssbo_positions [current] += ssbo_velocities[current] * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
+				//ssbo_positions [current] = clamp(ssbo_positions[current], { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+			}
+
+			inline __global__ void blender(float4* ssbo_positions, float4* ssbo_velocities,
+				float4* sorted_positions, float4* sorted_velocities,
+				float4* alignments, float4* cohesions, float4* separations, float4* wall_separations,
+				utils::runners::boid_runner::simulation_parameters* simulation_params, size_t amount, const float delta_time)
+			{
+				int i = blockIdx.x * blockDim.x + threadIdx.x;
+				if (i >= amount) return;
+
+				float chs = simulation_params->static_params.cube_size / 2;
+				float4 accel_blend, new_position = sorted_positions[i], new_velocity;
+
+				accel_blend = simulation_params->dynamic_params.alignment_coeff * alignments[i]
+					+ simulation_params->dynamic_params.cohesion_coeff * cohesions[i]
+					+ simulation_params->dynamic_params.separation_coeff * separations[i]
+					+ simulation_params->dynamic_params.wall_separation_coeff * wall_separations[i];
+
+				new_velocity = utils::math::normalize_or_zero(sorted_velocities[i] + accel_blend * delta_time); //v = u + at
+				new_position += new_velocity * simulation_params->dynamic_params.boid_speed * delta_time; //s = vt
+				new_position = clamp(new_position, { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
+			
+				ssbo_velocities[i] = new_velocity;
+				ssbo_positions [i] = new_position;
 			}
 		}
 	}

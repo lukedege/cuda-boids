@@ -25,9 +25,6 @@
     <Filter Include="Sources\Runners">
       <UniqueIdentifier>{dad3d1af-7ecd-4edc-8cf9-b86ddcf0e5e9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Sources\old">
-      <UniqueIdentifier>{fba5e1c9-c265-4a66-bf44-517fe14b7dd1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders\vao">
       <UniqueIdentifier>{9d66c67a-5c08-47ac-b2a9-f2ab7047d414}</UniqueIdentifier>
     </Filter>
@@ -110,12 +107,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="old_main2.cpp">
-      <Filter>Sources\old</Filter>
-    </CudaCompile>
-    <CudaCompile Include="old_main.cpp">
-      <Filter>Sources\old</Filter>
-    </CudaCompile>
     <CudaCompile Include="runners\gpu_ssbo.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>

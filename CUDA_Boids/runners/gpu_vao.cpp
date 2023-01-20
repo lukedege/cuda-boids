@@ -1,4 +1,4 @@
-#include "gpu_vao.h"
+/*#include "gpu_vao.h"
 
 // std libraries
 #include <vector>
@@ -82,4 +82,4 @@ namespace utils::runners
 		glBindVertexArray(0);
 	}
 	
-}
+}*/

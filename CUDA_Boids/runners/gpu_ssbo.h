@@ -35,7 +35,6 @@ namespace utils::runners
 		utils::cuda::gl_manager cuda_gl_manager;
 		
 		simulation_parameters* sim_params_dptr;
-		utils::math::plane* sim_volume_dptr;
 
 		cudaStream_t ali_stream, coh_stream, sep_stream, wsp_stream;
 
@@ -47,14 +46,17 @@ namespace utils::runners
 		// Grid-related fields
 		float grid_resolution;
 		behaviours::boid_cell_index* boid_cell_indices_dptr; // aka bci
-		behaviours::idx_range* cell_idx_range_dptr; // aka cir
+		//behaviours::idx_range* cell_idx_range_dptr; // aka cir, AoS pattern = bad
+		int* cell_idx_range_start_dptr; // split into two separate arrays to enforce SoA memory access pattern
+		int* cell_idx_range_end_dptr;
+		
 
 		cudaStream_t bci_stream, cir_stream;
 
 		// Swap-auxiliary arrays
-		float4* positions_aux_dptr;
-		float4* velocities_aux_dptr;
-		int* cell_indices_aux_dptr;
+		float4* sorted_positions_dptr;
+		float4* sorted_velocities_dptr;
+		int* sorted_cell_indices_dptr;
 
 		cudaStream_t pos_stream, vel_stream;
 	};

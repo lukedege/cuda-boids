@@ -1,4 +1,6 @@
 #include <iostream>
+#include <array>
+#include <vector>
 
 #include <cuda_runtime.h>
 #include "utils/CUDA/cuda_utils.h"
@@ -214,11 +216,154 @@ void gpu_ssbo::uniform_grid_calculation(const float delta_time)
 
 	std::vector<grid_bhvr::idx_range> test_host_cir{ find_cell_boid_range(test_device_sorted.data(), amount, grid_resolution) };
 }*/
-
-
-int mainz()
+cudaStream_t stream_1, stream_2, stream_3;
+__global__ void kernel1_1(float4* n_dptr)
 {
-	plane_test();
-
-	return 0;
+	float4 x = { 1,1,1,1 };
+	for (int i = 0; i < 3; i++)
+	{
+		n_dptr[i] = x;
+		printf("%s", "");
+	}
 }
+
+__global__ void kernel1(float4* n_dptr)
+{
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	if(idx == 0)
+		kernel1_1 CUDA_KERNEL(1, 1)(n_dptr);
+
+	float4 x = {1,1,1,1};
+	for (int i = 0; i < 12; i++)
+	{
+		n_dptr[i] = x;
+		printf("%s", "");
+	}
+}
+
+__global__ void kernel2(float4* n_dptr)
+{
+	float4 x = { 2,2,2,2 };
+	for (int i = 0; i < 7; i++)
+	{
+		n_dptr[i] = x;
+		printf("%s", "");
+	}
+}
+
+__global__ void kernel3()
+{
+	int x = 0;
+	for (int i = 0; i < 2; i++)
+	{
+		printf("%d", x++);
+	}
+}
+
+void nvprof_main()
+{
+	float4* numbers_dptr;
+	cudaMalloc(&numbers_dptr, 100000 * sizeof(float4));
+
+	cudaStream_t stream_1, stream_2, stream_3;
+	cudaStreamCreate(&stream_1); cudaStreamCreate(&stream_2); cudaStreamCreate(&stream_3);
+	ugl::window wdw
+	{
+		ugl::window::window_create_info
+		{
+			{ "Prova" }, //.title
+			{ 4       }, //.gl_version_major
+			{ 3       }, //.gl_version_minor
+			{ 1200    }, //.window_width
+			{ 1200     }, //.window_height
+			{ 1200    }, //.viewport_width
+			{ 1200     }, //.viewport_height
+			{ false   }, //.resizable
+			{ false   }, //.debug_gl
+		}
+	};
+
+
+	//cudaMemsetAsync(numbers_dptr, 0, 100000 * sizeof(float4), stream_3);
+	//kernel3 CUDA_KERNEL(8, 32, 0, stream_3)();
+	//cudaStreamSynchronize(stream_3);
+	while (wdw.is_open())
+	{
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		kernel1 CUDA_KERNEL(8, 32, 0, stream_1)(numbers_dptr);
+		kernel2 CUDA_KERNEL(8, 32, 0, stream_2)(numbers_dptr);
+		kernel1 CUDA_KERNEL(8, 32)(numbers_dptr);
+		cudaDeviceSynchronize();
+
+		glfwSwapBuffers(wdw.get());
+		glfwPollEvents();
+	}
+}
+
+struct innerStruct {
+	float x;
+	float y;
+};
+
+struct innerArray {
+	float x[1000000];
+	float y[1000000];
+};
+
+__global__ void testInnerStruct(innerStruct* data, innerStruct* result, const int n) {
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if (i < n) {
+		innerStruct tmp = data[i];
+		tmp.x += 10.f;
+		tmp.y += 20.f;
+		result[i] = tmp;
+	}
+}
+
+__global__ void testInnerArray(innerArray* data, innerArray* result, const int n) {
+	unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if (i < n) {
+		float tmpx = data->x[i];
+		float tmpy = data->y[i];
+		tmpx += 10.f;
+		tmpy += 20.f;
+		result->x[i] = tmpx;
+		result->y[i] = tmpy;
+	}
+}
+
+void aos_test()
+{
+	int n = 1000000;
+
+	innerStruct* aos_src_dptr, * aos_dst_dptr;
+	cudaMalloc(&aos_src_dptr, n * sizeof(innerStruct));
+	cudaMalloc(&aos_dst_dptr, n * sizeof(innerStruct));
+
+	innerArray* soa_src_dptr, * soa_dst_dptr;
+	cudaMalloc(&soa_src_dptr, sizeof(innerArray));
+	cudaMalloc(&soa_src_dptr, sizeof(innerArray));
+
+	testInnerStruct CUDA_KERNEL(1024, 1024)(aos_src_dptr, aos_dst_dptr, n);
+	testInnerArray  CUDA_KERNEL(1024, 1024)(soa_src_dptr, soa_dst_dptr, n);
+	cudaDeviceSynchronize();
+}
+
+//struct plane
+//{
+//	float4 origin;
+//	float4 normal;
+//};
+//__constant__ utils::math::plane sim_volume_cdptr[6];
+//
+//int mainz()
+//{
+//	std::array<utils::math::plane, 6> sim_volume;
+//
+//	checkCudaErrors(cudaMemcpyToSymbol(sim_volume_cdptr, sim_volume.data(), sizeof(utils::math::plane) * 6, 0, cudaMemcpyHostToDevice));
+//	checkCudaErrors(cudaDeviceSynchronize());
+//
+//	return 0;
+//}
