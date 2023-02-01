@@ -20,7 +20,7 @@ namespace utils::runners
 		void uniform_grid_calculation(const float delta_time);
 		void coherent_grid_calculation(const float delta_time);
 
-		size_t amount; //TODO possibly redundant but comfy to avoid writing params.boid_amount bla bla
+		size_t amount; //TODO possibly redundant but comfy to avoid writing params.boid_amount etc...
 		std::vector<float4> positions; 
 		std::vector<float4> velocities;
 	};

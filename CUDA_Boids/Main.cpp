@@ -87,9 +87,9 @@ int main()
 		},
 		{
 			{ 20.0f },//boid_speed
-			{ 20   },//boid_fov
+			{ 15   },//boid_fov
 			{ 1.0f },//alignment_coeff
-			{ 0.8f },//cohesion_coeff
+			{ 0.9f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
 			{ 10.0f },//wall_separation_coeff
 		}

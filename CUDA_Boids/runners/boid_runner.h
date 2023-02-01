@@ -20,7 +20,7 @@ namespace utils::runners
 		{
 			struct static_parameters
 			{
-				size_t          boid_amount{ 100   };
+				size_t             boid_amount{ 100   };
 				float           cube_size  { 20.f  };
 				simulation_type sim_type   { NAIVE };
 			} static_params;

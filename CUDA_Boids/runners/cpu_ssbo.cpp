@@ -58,7 +58,7 @@ namespace utils::runners
 		{
 			std::vector<behaviours::boid_cell_index> boid_cell_indices(boid_amount);
 
-			int cell_amount = grid_resolution * grid_resolution * grid_resolution;
+			int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
 			float cube_half_size = grid_extent / 2;
 
 			int x, y, z, linear_index;
@@ -77,7 +77,7 @@ namespace utils::runners
 
 		std::vector<behaviours::idx_range> find_cell_boid_range(const behaviours::boid_cell_index* boid_cell_indices, const size_t boid_amount, const float grid_resolution)
 		{
-			int cell_amount = grid_resolution * grid_resolution * grid_resolution;
+			int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
 
 			std::vector<behaviours::idx_range> cell_idx_range(cell_amount);
 

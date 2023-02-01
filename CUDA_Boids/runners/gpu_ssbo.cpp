@@ -20,6 +20,7 @@
 #include "../utils/utils.h"
 
 __constant__ utils::math::plane sim_volume_cdptr[6];
+__constant__ utils::runners::boid_runner::simulation_parameters sim_params_cmem;
 
 namespace utils::runners
 {
@@ -28,7 +29,7 @@ namespace utils::runners
 		amount{ params.static_params.boid_amount },
 		ssbo_positions_dptr{ nullptr },
 		ssbo_velocities_dptr{ nullptr },
-		block_size{ 256 },
+		block_size{ 128 },
 		grid_size{ static_cast<size_t>(utils::math::ceil(amount, block_size)) }
 	{
 		setup_buffer_object(ssbo_positions , GL_SHADER_STORAGE_BUFFER, sizeof(float4), amount, 0, 0);
@@ -41,12 +42,14 @@ namespace utils::runners
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_positions_dptr, amount, -spawn_range, spawn_range);
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_velocities_dptr, amount, -1, 1);
 
-		// manual transfers are sufficient since transfers on these variables are occasional and one-sided only (CPU->GPU)
-		checkCudaErrors(cudaMalloc(&sim_params_dptr, sizeof(simulation_parameters)));
-		checkCudaErrors(cudaMemcpy(sim_params_dptr, &sim_params, sizeof(simulation_parameters), cudaMemcpyHostToDevice));
+		// we are not using shared memory so we prefer to have a bigger l1 cache
+		checkCudaErrors(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+
+		// manual transfers are sufficient since transfers on these variables are occasional and one-sided only (CPU->GPU) and are constant while kernel runs
+		checkCudaErrors(cudaMemcpyToSymbol(sim_params_cmem, &sim_params, sizeof(simulation_parameters)));
 
 		// The cube volume is constant so we can use cuda constant memory
-		checkCudaErrors(cudaMemcpyToSymbol(sim_volume_cdptr, sim_volume.data(), sizeof(utils::math::plane) * 6, 0, cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpyToSymbol(sim_volume_cdptr, sim_volume.data(), sizeof(utils::math::plane) * 6));
 		
 		// cudaMalloc is sufficient since no transfers between CPU-GPU (no cudaMemcpy)
 		checkCudaErrors(cudaMalloc(&alignments_dptr      , amount * sizeof(float4)));
@@ -80,8 +83,8 @@ namespace utils::runners
 	void gpu_ssbo::naive_calculation(const float delta_time)
 	{
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		//behaviours::gpu::naive::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov, sim_volume_cdptr, sim_params_dptr, delta_time);
-		//cudaDeviceSynchronize();
+		behaviours::gpu::naive::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov, delta_time);
+		cudaDeviceSynchronize();
 	}
 
 	// TODO maybe move helper methods to a prettier place instead of an anonymous namespace
@@ -93,7 +96,7 @@ namespace utils::runners
 			int current = blockIdx.x * blockDim.x + threadIdx.x;
 			if (current >= boid_amount) return; // avoid threads ids overflowing the array
 
-			int cell_amount = grid_resolution * grid_resolution * grid_resolution;
+			int cell_amount = max(1.f, grid_resolution * grid_resolution * grid_resolution);
 			float cube_half_size = grid_extent / 2;
 
 			// trying to work with local/register memory as much as possible
@@ -167,37 +170,38 @@ namespace utils::runners
 	
 	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
 	{
-		//namespace bhvr = behaviours;
-		//
-		//int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
-		//
-		////Reset the grid arrays
-		//checkCudaErrors(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::boid_cell_index) * amount, bci_stream));
-		//checkCudaErrors(cudaMemsetAsync(cell_idx_range_dptr   , 0, sizeof(behaviours::idx_range) * cell_amount , cir_stream));
-		//checkCudaErrors(cudaDeviceSynchronize());
-		//
-		//// Assign linear grid index to each boid
-		//assign_grid_indices CUDA_KERNEL(grid_size, block_size)(boid_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
-		//cudaDeviceSynchronize();
-		//
-		//// Sort boids by grid index
-		//thrust::device_ptr<bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
-		//thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
-		//
-		//// Find ranges for boids living in the same grid cell
-		//find_cell_boid_range CUDA_KERNEL(grid_size, block_size)(cell_idx_range_dptr, boid_cell_indices_dptr, amount);
-		//cudaDeviceSynchronize();
-		//
-		//// Calculate velocities and apply velocity from all behaviours concurrently
-		//bhvr::gpu::grid::uniform::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, boid_cell_indices_dptr, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov, sim_volume_dptr, sim_params_dptr, delta_time);
-		//cudaDeviceSynchronize();
+		namespace bhvr = behaviours;
+		
+		int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
+		
+		//Reset the grid arrays
+		checkCudaErrors(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::boid_cell_index) * amount, bci_stream));
+		checkCudaErrors(cudaMemsetAsync(cell_idx_range_start_dptr   , 0, sizeof(int) * cell_amount, ali_stream)); // TODO temporary stream (to rename/change)
+		checkCudaErrors(cudaMemsetAsync(cell_idx_range_end_dptr     , 0, sizeof(int) * cell_amount, coh_stream)); // TODO temporary stream (to rename/change)
+		checkCudaErrors(cudaDeviceSynchronize());
+		
+		// Assign linear grid index to each boid
+		assign_grid_indices CUDA_KERNEL(grid_size, block_size)(boid_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
+		cudaDeviceSynchronize();
+		
+		// Sort boids by grid index
+		thrust::device_ptr<bhvr::boid_cell_index> thrust_bci(boid_cell_indices_dptr);
+		thrust::sort(thrust_bci, thrust_bci + amount, order_by_cell_id());
+		
+		// Find ranges for boids living in the same grid cell
+		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_start_dptr, cell_idx_range_end_dptr, boid_cell_indices_dptr, amount);
+		cudaDeviceSynchronize();
+		
+		// Calculate velocities and apply velocity from all behaviours concurrently
+		bhvr::gpu::grid::uniform::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, boid_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr, sim_params.dynamic_params.boid_fov, delta_time);
+		cudaDeviceSynchronize();
 	}
 
 	void gpu_ssbo::coherent_grid_calculation(const float delta_time) 
 	{
 		namespace bhvr = behaviours;
 
-		int cell_amount = std::max(grid_resolution * grid_resolution * grid_resolution, 1.f);
+		int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
 
 		//Reset the grid arrays
 		checkCudaErrors(cudaMemsetAsync(boid_cell_indices_dptr, 0, sizeof(behaviours::boid_cell_index) * amount, bci_stream));
@@ -226,7 +230,7 @@ namespace utils::runners
 		//cudaDeviceSynchronize();
 
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		bhvr::gpu::grid::coherent::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, sorted_positions_dptr, sorted_velocities_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_start_dptr, cell_idx_range_end_dptr, sim_params.dynamic_params.boid_fov, sim_params_dptr, delta_time);
+		bhvr::gpu::grid::coherent::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, sorted_positions_dptr, sorted_velocities_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_start_dptr, cell_idx_range_end_dptr, sim_params.dynamic_params.boid_fov, delta_time);
 		//bhvr::gpu::grid::coherent::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr,       sorted_positions_dptr, sorted_velocities_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
 		//bhvr::gpu::grid::coherent::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr,        sorted_positions_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
 		//bhvr::gpu::grid::coherent::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr,      sorted_positions_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
@@ -279,7 +283,6 @@ namespace utils::runners
 		checkCudaErrors(cudaStreamDestroy(coh_stream)); 
 		checkCudaErrors(cudaStreamDestroy(sep_stream)); 
 		checkCudaErrors(cudaStreamDestroy(wsp_stream));
-		checkCudaErrors(cudaFree(sim_params_dptr));
 		checkCudaErrors(cudaFree(alignments_dptr      ));
 		checkCudaErrors(cudaFree(cohesions_dptr       ));
 		checkCudaErrors(cudaFree(separations_dptr     ));
@@ -324,7 +327,7 @@ namespace utils::runners
 			}
 			// Update parameters (both on cpu and gpu)
 			sim_params.dynamic_params = new_dyn_params;
-			checkCudaErrors(cudaMemcpy(sim_params_dptr, &sim_params, sizeof(simulation_parameters), cudaMemcpyHostToDevice));
+			checkCudaErrors(cudaMemcpyToSymbol(sim_params_cmem, &sim_params, sizeof(simulation_parameters)));
 		}
 	}
 }

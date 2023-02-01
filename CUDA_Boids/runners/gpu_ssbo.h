@@ -34,7 +34,7 @@ namespace utils::runners
 		size_t grid_size;
 		utils::cuda::gl_manager cuda_gl_manager;
 		
-		simulation_parameters* sim_params_dptr;
+		//simulation_parameters* sim_params_dptr;
 
 		cudaStream_t ali_stream, coh_stream, sep_stream, wsp_stream;
 

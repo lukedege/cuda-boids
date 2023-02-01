@@ -71,9 +71,10 @@
       <CodeGeneration>compute_37,sm_37</CodeGeneration>
       <CudaRuntime>Shared</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <AdditionalOptions>-std=c++17 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Od</Optimization>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -100,7 +101,7 @@
       <CodeGeneration>compute_37,sm_37</CodeGeneration>
       <CudaRuntime>Static</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <AdditionalOptions>-std=c++17 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
       <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>

@@ -12,6 +12,7 @@
 #include "utils/camera.h"
 
 #include "utils/utils.h"
+#include "runners/boid_runner.h"
 
 namespace ugl = utils::graphics::opengl;
 
@@ -351,19 +352,51 @@ void aos_test()
 	cudaDeviceSynchronize();
 }
 
-//struct plane
-//{
-//	float4 origin;
-//	float4 normal;
-//};
-//__constant__ utils::math::plane sim_volume_cdptr[6];
-//
-//int mainz()
-//{
-//	std::array<utils::math::plane, 6> sim_volume;
-//
-//	checkCudaErrors(cudaMemcpyToSymbol(sim_volume_cdptr, sim_volume.data(), sizeof(utils::math::plane) * 6, 0, cudaMemcpyHostToDevice));
-//	checkCudaErrors(cudaDeviceSynchronize());
-//
-//	return 0;
-//}
+struct plane
+{
+	float4 origin;
+	float4 normal;
+};
+__constant__ utils::math::plane sim_volum_cdptr[6];
+__constant__ utils::runners::boid_runner::simulation_parameters sim_params_cdptr;
+
+int mainz()
+{
+	std::array<utils::math::plane, 6> sim_volume;
+	
+	checkCudaErrors(cudaMemcpyToSymbol(sim_volum_cdptr, sim_volume.data(), sizeof(utils::math::plane) * 6, 0, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaDeviceSynchronize());
+	
+	utils::runners::boid_runner::simulation_parameters params
+	{
+		{
+			{ 100000 },//boid_amount
+			{ 200.f },//cube_size
+			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
+		},
+		{
+			{ 20.0f },//boid_speed
+			{ 20   },//boid_fov
+			{ 1.0f },//alignment_coeff
+			{ 0.8f },//cohesion_coeff
+			{ 1.0f },//separation_coeff
+			{ 10.0f },//wall_separation_coeff
+		}
+	};
+	utils::runners::boid_runner::simulation_parameters gpu_params;
+	checkCudaErrors(cudaMemcpyToSymbol(sim_params_cdptr, &params, sizeof(utils::runners::boid_runner::simulation_parameters)));
+	checkCudaErrors(cudaDeviceSynchronize());
+	int i = 0;
+	while (true)
+	{
+		kernel3 CUDA_KERNEL(2, 8)();
+		params.dynamic_params.alignment_coeff = i;
+		checkCudaErrors(cudaMemcpyToSymbol  (sim_params_cdptr, &params, sizeof(utils::runners::boid_runner::simulation_parameters)));
+		checkCudaErrors(cudaMemcpyFromSymbol(&gpu_params, sim_params_cdptr, sizeof(utils::runners::boid_runner::simulation_parameters)));
+		checkCudaErrors(cudaDeviceSynchronize());
+		i++;
+		// TLDR puoi muovere sim_params to constant mempry
+	}
+	
+	return 0;
+}
