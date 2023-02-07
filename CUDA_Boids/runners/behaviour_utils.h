@@ -12,7 +12,7 @@ namespace utils::runners::behaviours
 		int cell_id;
 	};
 
-	struct idx_range // TODO to remove because of bas AoS pattern
+	struct idx_range 
 	{
 		int start{ 0 }; //inclusive
 		int end{ 0 }; //exclusive

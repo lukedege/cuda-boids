@@ -51,7 +51,6 @@ namespace utils::runners
 		update_buffer_object(ssbo_velocities, GL_SHADER_STORAGE_BUFFER, 0, sizeof(float4), amount, velocities.data());
 	}
 
-	// TODO maybe move helper methods to a prettier place instead of an anonymous namespace
 	namespace
 	{
 		std::vector<behaviours::boid_cell_index> assign_grid_indices(const float4* boid_positions, const size_t boid_amount, const float grid_extent, const float grid_resolution)
@@ -113,17 +112,17 @@ namespace utils::runners
 		float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
 		float grid_resolution = sim_params.static_params.cube_size / cell_size;
 		
-		// 2) create a "grid" and localize each boid inside of it with a linear index
+		// create a "grid" and localize each boid inside of it with a linear index
 		std::vector<bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
 		
-		// 3) sort the boids according to their cell's linear index 
+		// sort the boid array given their cell linear index 
 		auto order_by_cell_id = [](const bhvr::boid_cell_index& a, const bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
 		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), order_by_cell_id);
 		
-		// 4) calculate "start" and "end" indices for each cell (to find the range of adjacent, same-cell boids)
+		// compute the range [start, end) for each cell in the grid (to find the range of adjacent, same-cell boids)
 		std::vector<bhvr::idx_range> cell_idx_range{ find_cell_boid_range(boid_cell_indices.data(), amount, grid_resolution) };
 
-		// 5) calcola le velocità usando solo quella cella come neighborhood
+		// compute the new velocities and positions for boids given the applied behaviours given the neighbourhood (grid cell)
 		float4 accel_blend;
 		float chs = sim_params.static_params.cube_size / 2 - 0.0001f;
 		for (size_t i = 0; i < amount; i++)
@@ -151,10 +150,10 @@ namespace utils::runners
 		float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
 		float grid_resolution = sim_params.static_params.cube_size / cell_size;
 		
-		// 2) create a "grid" and localize each boid inside of it with a linear index
+		// create a "grid" and localize each boid inside of it with a linear index
 		std::vector<bhvr::boid_cell_index> boid_cell_indices{ assign_grid_indices(positions.data(), amount, sim_params.static_params.cube_size, grid_resolution) };
 		
-		// 3) ordina l'array di boid secondo la loro posizione di griglia(scattered=ordina solo il boid index, coherent = ordina pure velocities e positions)
+		// sort the boid array (including positions and velocities arrays) given their cell linear index 
 		auto order_by_cell_id = [](const bhvr::boid_cell_index& a, const bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
 		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), order_by_cell_id);
 		
@@ -170,10 +169,10 @@ namespace utils::runners
 		velocities = new_vel;
 		positions = new_pos;
 		
-		// 4) calcola "start" e "end" di ogni cella della griglia(ovvero il range di indici uguali dei boid adiacenti)
+		// compute the range [start, end) for each cell in the grid (to find the range of adjacent, same-cell boids)
 		std::vector<bhvr::idx_range> cell_idx_range{ find_cell_boid_range(boid_cell_indices.data(), amount, grid_resolution) };
 
-		// 5) calcola le velocità usando solo quella cella come neighborhood
+		// compute the new velocities and positions for boids given the applied behaviours given the neighbourhood (grid cell)
 		float4 accel_blend;
 		float chs = sim_params.static_params.cube_size / 2 - 0.0001f; 
 		for (size_t i = 0; i < amount; i++)

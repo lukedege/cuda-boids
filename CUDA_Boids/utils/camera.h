@@ -92,7 +92,6 @@ namespace utils::graphics::opengl
 	private:
 		void updateCameraVectors()
 		{
-			// TODO add roll
 			float yaw_r = glm::radians(yaw),
 				pitch_r = glm::radians(pitch),
 				roll_r  = glm::radians(roll);

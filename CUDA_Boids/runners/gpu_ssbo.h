@@ -33,25 +33,23 @@ namespace utils::runners
 		size_t block_size;
 		size_t grid_size;
 		utils::cuda::gl_manager cuda_gl_manager;
-		
-		//simulation_parameters* sim_params_dptr;
 
-		cudaStream_t ali_stream, coh_stream, sep_stream, wsp_stream;
-
-		float4* alignments_dptr;
-		float4* cohesions_dptr;
-		float4* separations_dptr;
-		float4* wall_separations_dptr;
+		// Fields for modular method (but unviable, kept for reference)
+		//cudaStream_t ali_stream, coh_stream, sep_stream, wsp_stream;
+		//float4* alignments_dptr;
+		//float4* cohesions_dptr;
+		//float4* separations_dptr;
+		//float4* wall_separations_dptr;
 
 		// Grid-related fields
 		float grid_resolution;
 		behaviours::boid_cell_index* boid_cell_indices_dptr; // aka bci
-		//behaviours::idx_range* cell_idx_range_dptr; // aka cir, AoS pattern = bad
+		//behaviours::idx_range* cell_idx_range_dptr; // aka cir, AoS pattern = bad (kept for reference)
 		int* cell_idx_range_start_dptr; // split into two separate arrays to enforce SoA memory access pattern
 		int* cell_idx_range_end_dptr;
 		
 
-		cudaStream_t bci_stream, cir_stream;
+		cudaStream_t bci_stream, cir_stream, cir_stream2;
 
 		// Swap-auxiliary arrays
 		float4* sorted_positions_dptr;

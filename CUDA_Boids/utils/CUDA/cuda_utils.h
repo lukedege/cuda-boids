@@ -150,7 +150,7 @@ namespace utils::cuda
 			curandState* states_dptr;
 			checkCudaErrors(cudaMalloc((void**)&states_dptr, size * sizeof(curandState)));
 			setup_states CUDA_KERNEL(grid_size, block_size)(states_dptr);
-			cudaDeviceSynchronize(); // TODO use events maybe
+			cudaDeviceSynchronize(); 
 			generate_float4 CUDA_KERNEL(grid_size, block_size)(states_dptr, arr_dptr, size, min, max);
 			cudaDeviceSynchronize();
 			checkCudaErrors(cudaFree(states_dptr));

@@ -39,7 +39,7 @@ bool keys[1024];
 
 ugl::orbit_camera camera{ glm::vec3(0, 0, 0), 50.f };
 
-int main()
+int main(int argc, char** argv)
 {
 	// OpenGL window setup
 	ugl::window wdw
@@ -85,7 +85,7 @@ int main()
 		},
 		{
 			{ 20.0f },//boid_speed
-			{ 15   },//boid_fov
+			{ 5     },//boid_fov
 			{ 1.0f },//alignment_coeff
 			{ 0.9f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
@@ -96,7 +96,21 @@ int main()
 	float breath_speed     = 1.f;
 	float breath_amplitude = 0.25f;
 
+	// Read (eventual) arguments for static simulation parameters (0 = NAIVE, 1 = UNIFORM GRID, 2 = COHERENT GRID)
+	// TODO change uniform grid name to scattered grid around code
+	if (argc == 4)
+	{
+		params.static_params.boid_amount = std::stoi(argv[1]);
+		params.static_params.cube_size   = std::stof(argv[2]);
+		params.static_params.sim_type    = static_cast<utils::runners::boid_runner::simulation_type>(std::stoi(argv[3]));
+	}
+	else
+	{
+		std::cout << "WARNING: Provided no arguments or invalid ones, running with default parameters\n";
+	}
+
 	utils::runners::gpu_ssbo runner{ params };
+	
 	
 	// Visualization matrices setup for camera
 	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);
@@ -127,7 +141,7 @@ int main()
 
 		before_calculations = glfwGetTime();
 		runner.calculate(delta_time);
-		after_calculations = glfwGetTime(); // TODO measure time for kernel using CudaEvents
+		after_calculations = glfwGetTime(); 
 		delta_calculations = (after_calculations - before_calculations) * 1000; //in ms
 		
 		// DRAW STEP
@@ -137,6 +151,7 @@ int main()
 
 		view_matrix = camera.view_matrix();
 		runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
+		
 
 		// ImGUI window creation
 		ImGui_ImplOpenGL3_NewFrame();// Tell OpenGL a new Imgui frame is about to begin

@@ -74,8 +74,6 @@ namespace utils::runners::behaviours::cpu
 
 			return utils::math::normalize_or_zero(separation);
 		}
-		
-		// TODO flock like in gpu
 	}
 	namespace grid
 	{
@@ -133,8 +131,6 @@ namespace utils::runners::behaviours::cpu
 				}
 				return utils::math::normalize_or_zero(separation);
 			}
-		
-			// TODO flock like in gpu
 		}
 		namespace coherent
 		{
@@ -193,8 +189,6 @@ namespace utils::runners::behaviours::cpu
 				}
 				return utils::math::normalize_or_zero(separation);
 			}
-		
-			// TODO flock like in gpu
 		}
 	}
 }
