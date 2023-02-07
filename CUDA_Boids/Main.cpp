@@ -22,8 +22,6 @@
 
 #include "runners/gpu_ssbo.h"
 #include "runners/cpu_ssbo.h"
-#include "runners/cpu_vao.h"
-#include "runners/gpu_vao.h"
 
 namespace ugl = utils::graphics::opengl;
 

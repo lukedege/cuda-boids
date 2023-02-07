@@ -111,12 +111,9 @@
     <ClInclude Include="runners\cpu_boid_behaviours.h" />
     <ClInclude Include="runners\boid_runner.h" />
     <ClInclude Include="runners\cpu_ssbo.h" />
-    <ClInclude Include="runners\cpu_vao.h" />
     <CudaCompile Include="runners\gpu_boid_behaviours.h" />
     <ClInclude Include="runners\gpu_ssbo.h" />
-    <ClInclude Include="runners\gpu_vao.h" />
     <ClInclude Include="runners\ssbo_runner.h" />
-    <ClInclude Include="runners\vao_runner.h" />
     <ClInclude Include="utils\camera.h" />
     <ClInclude Include="utils\CUDA\cudaGLmanager.h" />
     <CudaCompile Include="utils\CUDA\cuda_utils.h" />
@@ -138,8 +135,6 @@
     <ClCompile Include="F:\Libraries\imgui-1.88\imgui_draw.cpp" />
     <ClCompile Include="F:\Libraries\imgui-1.88\imgui_tables.cpp" />
     <ClCompile Include="F:\Libraries\imgui-1.88\imgui_widgets.cpp" />
-    <ClCompile Include="runners\cpu_vao.cpp" />
-    <CudaCompile Include="runners\gpu_vao.cpp" />
     <CudaCompile Include="runners\gpu_ssbo.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -148,8 +143,6 @@
     <None Include="shaders\basic.vert" />
     <None Include="shaders\mvp.vert" />
     <None Include="shaders\ssbo.vert" />
-    <None Include="shaders\vao.geom" />
-    <None Include="shaders\vao.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
