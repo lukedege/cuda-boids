@@ -15,7 +15,7 @@
 namespace utils::runners
 {
 	cpu_ssbo::cpu_ssbo(simulation_parameters params) :
-		ssbo_runner{ {"shaders/ssbo.vert", "shaders/basic.frag"}, params },
+		ssbo_runner{ params },
 		amount{ params.static_params.boid_amount },
 		positions { std::vector<float4>(amount) },
 		velocities{ std::vector<float4>(amount) }

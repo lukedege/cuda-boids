@@ -55,22 +55,21 @@ namespace utils::runners
 
 		virtual simulation_parameters get_simulation_parameters() = 0;
 		virtual void set_dynamic_simulation_parameters(simulation_parameters::dynamic_parameters new_dyn_params) = 0;
-
+		
+		virtual ~boid_runner()
+		{
+			boid_shader.del();
+			debug_shader.del();
+		}
 	protected:
 		boid_runner(utils::graphics::opengl::Shader&& boid_shader, simulation_parameters params = {}) :
-			sim_params{ params },
-			sim_volume{ reset_volume() },
-			cube_mesh{ reset_cube_mesh() },
-			boid_shader{ std::move(boid_shader) },
+			sim_params  { params },
+			sim_volume  { reset_volume() },
+			cube_mesh   { reset_cube_mesh() },
+			boid_shader { std::move(boid_shader) },
 			debug_shader{ "shaders/mvp.vert", "shaders/basic.frag" }
 		{
 			setup_buffer_object(ubo_matrices, GL_UNIFORM_BUFFER, sizeof(glm::mat4), 2, 2, 0);
-		}
-
-		~boid_runner()
-		{
-			boid_shader .del();
-			debug_shader.del();
 		}
 
 		inline std::array<utils::math::plane, 6> reset_volume()

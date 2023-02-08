@@ -25,7 +25,7 @@ __constant__ utils::runners::boid_runner::simulation_parameters sim_params_cmem;
 namespace utils::runners
 {
 	gpu_ssbo::gpu_ssbo(simulation_parameters params) :
-		ssbo_runner{ {"shaders/ssbo.vert", "shaders/basic.frag"}, params },
+		ssbo_runner{ params },
 		amount{ params.static_params.boid_amount },
 		ssbo_positions_dptr{ nullptr },
 		ssbo_velocities_dptr{ nullptr },
