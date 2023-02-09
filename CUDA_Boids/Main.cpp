@@ -79,13 +79,13 @@ int main(int argc, char** argv)
 	utils::runners::boid_runner::simulation_parameters params
 	{
 		{
-			{ 100000 },//boid_amount
+			{ 1000000 },//boid_amount
 			{ 200.f },//cube_size
 			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
 		},
 		{
 			{ 20.0f },//boid_speed
-			{ 5     },//boid_fov
+			{ 5    },//boid_fov
 			{ 1.0f },//alignment_coeff
 			{ 0.9f },//cohesion_coeff
 			{ 1.0f },//separation_coeff
@@ -97,7 +97,6 @@ int main(int argc, char** argv)
 	float breath_amplitude = 0.25f;
 
 	// Read (eventual) arguments for static simulation parameters (0 = NAIVE, 1 = UNIFORM GRID, 2 = COHERENT GRID)
-	// TODO change uniform grid name to scattered grid around code
 	if (argc == 4)
 	{
 		params.static_params.boid_amount = std::stoi(argv[1]);
@@ -118,20 +117,20 @@ int main(int argc, char** argv)
 	camera.update_distance(params.static_params.cube_size * 1.2f);
 
 	// Measurements variables setup
-	GLfloat delta_time = 0.0f, last_frame = 0.0f, current_fps = 0.0f;
-	GLfloat before_calculations = 0.0f, after_calculations = 0.0f, delta_calculations = 0.0f;
-	GLfloat avg_calc = 1.f, avg_fps = 1.f;
-	GLfloat alpha = 0.9;
-	GLfloat max_fov = params.static_params.cube_size / 2; 
+	double delta_time = 0.0, last_frame_time = 0.0;
+	double before_calculations = 0.0, after_calculations = 0.0, delta_calculations = 0.0;
+	double avg_calc = 1, avg_fps = 1;
+	double alpha = 0.9;
+	double max_fov = params.static_params.cube_size / 2; 
 	std::cout << std::setprecision(4) << std::fixed;
 
 	// Main loop
 	while (wdw.is_open())
 	{
 		// Calculate the time difference between current frame rendering and the previous one
-		GLfloat current_frame = glfwGetTime();
-		delta_time = current_frame - last_frame;
-		last_frame = current_frame;
+		double current_frame_time = glfwGetTime();
+		delta_time = current_frame_time - last_frame_time;
+		last_frame_time = current_frame_time;
 
 		// Process input
 		glfwPollEvents();
@@ -150,7 +149,7 @@ int main(int argc, char** argv)
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		view_matrix = camera.view_matrix();
-		runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
+		//runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
 		
 
 		// ImGUI window creation
@@ -179,8 +178,8 @@ int main(int argc, char** argv)
 		runner.set_dynamic_simulation_parameters(params.dynamic_params);
 
 		// Update performance measurements
-		current_fps = (1 / delta_time);
-		avg_fps = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
+		//current_fps = (1 / delta_time);
+		avg_fps  = alpha * avg_fps + (1.0 - alpha) * (1 / delta_time);
 		avg_calc = alpha * avg_calc + (1.0 - alpha) * (delta_calculations);
 		//std::cout << "Calcs: " << delta_calculations << "ms | ";
 		//std::cout << "FPS: " << current_fps << "\n";
@@ -246,7 +245,7 @@ void mouse_pos_callback(GLFWwindow* window, double xpos, double ypos)
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	float zoom = camera.get_distance();
-	zoom -= yoffset;
+	zoom -= static_cast<float>(yoffset);
 	zoom = std::clamp(zoom, 0.1f, 1000.0f);
 	camera.update_distance(zoom);
 }

@@ -101,7 +101,7 @@
       <CodeGeneration>compute_37,sm_37</CodeGeneration>
       <CudaRuntime>Static</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
-      <AdditionalOptions>-std=c++17 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Wno-deprecated-gpu-targets -lineinfo %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
       <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>

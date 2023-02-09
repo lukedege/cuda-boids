@@ -10,11 +10,6 @@
 
 namespace utils
 {
-	namespace time
-	{
-		inline double seconds() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
-	}
-
 	namespace math
 	{
 		struct plane

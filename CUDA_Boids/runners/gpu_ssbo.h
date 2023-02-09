@@ -43,9 +43,12 @@ namespace utils::runners
 
 		// Grid-related fields
 		float grid_resolution;
-		behaviours::boid_cell_index* boid_cell_indices_dptr; // aka bci
+		//behaviours::boid_cell_index* boid_cell_indices_dptr; // aka bci
 		//behaviours::idx_range* cell_idx_range_dptr; // aka cir, AoS pattern = bad (kept for reference)
-		int* cell_idx_range_start_dptr; // split into two separate arrays to enforce SoA memory access pattern
+		int* bci_boid_indices_dptr;
+		int* bci_cell_indices_dptr; // split into two separate arrays to enforce SoA memory access pattern
+		
+		int* cell_idx_range_start_dptr; // same reason as above
 		int* cell_idx_range_end_dptr;
 		
 
@@ -54,7 +57,6 @@ namespace utils::runners
 		// Swap-auxiliary arrays
 		float4* sorted_positions_dptr;
 		float4* sorted_velocities_dptr;
-		int* sorted_cell_indices_dptr;
 
 		cudaStream_t pos_stream, vel_stream;
 	};

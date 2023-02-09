@@ -70,7 +70,7 @@ namespace utils::graphics::opengl
 			glBindVertexArray(0);
 		}
 
-		void draw_instanced(int amount, GLenum mode = GL_TRIANGLES)
+		void draw_instanced(size_t amount, GLenum mode = GL_TRIANGLES)
 		{
 			glBindVertexArray(VAO);
 			glDrawElementsInstanced(mode, indices.size(), GL_UNSIGNED_INT, 0, amount);

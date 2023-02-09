@@ -20,7 +20,7 @@ namespace utils::runners
 		positions { std::vector<float4>(amount) },
 		velocities{ std::vector<float4>(amount) }
 	{
-		float spawn_range = sim_params.static_params.cube_size * 0.5f - 0.001f;
+		int spawn_range = static_cast<int>(sim_params.static_params.cube_size * 0.5f - 0.001f);
 		utils::cuda::containers::random_vec4_fill_hptr(positions.data(), amount, -spawn_range, spawn_range);
 		utils::cuda::containers::random_vec4_fill_hptr(velocities.data(), amount, -1, 1);
 
@@ -33,7 +33,7 @@ namespace utils::runners
 		namespace cpu_bhvr = behaviours::cpu;
 		float4 accel_blend;
 		float chs = sim_params.static_params.cube_size / 2;
-		float boid_fov = sim_params.dynamic_params.boid_fov;
+		int boid_fov = sim_params.dynamic_params.boid_fov;
 		for (size_t i = 0; i < amount; i++)
 		{
 			accel_blend = sim_params.dynamic_params.alignment_coeff       * cpu_bhvr::naive::alignment  (i, positions.data(), velocities.data(), amount, boid_fov)
@@ -57,16 +57,16 @@ namespace utils::runners
 		{
 			std::vector<behaviours::boid_cell_index> boid_cell_indices(boid_amount);
 
-			int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
+			int cell_amount = static_cast<int>(std::max(1.f, grid_resolution * grid_resolution * grid_resolution));
 			float cube_half_size = grid_extent / 2;
 
 			int x, y, z, linear_index;
 			for (size_t i = 0; i < boid_amount; i++)
 			{
-				x = utils::math::normalized_value_in_range(boid_positions[i].x, -cube_half_size, cube_half_size) * grid_resolution;
-				y = utils::math::normalized_value_in_range(boid_positions[i].y, -cube_half_size, cube_half_size) * grid_resolution;
-				z = utils::math::normalized_value_in_range(boid_positions[i].z, -cube_half_size, cube_half_size) * grid_resolution;
-				linear_index = x * grid_resolution * grid_resolution + y * grid_resolution + z;
+				x = static_cast<int>(utils::math::normalized_value_in_range(boid_positions[i].x, -cube_half_size, cube_half_size) * grid_resolution);
+				y = static_cast<int>(utils::math::normalized_value_in_range(boid_positions[i].y, -cube_half_size, cube_half_size) * grid_resolution);
+				z = static_cast<int>(utils::math::normalized_value_in_range(boid_positions[i].z, -cube_half_size, cube_half_size) * grid_resolution);
+				linear_index = static_cast<int>(x * grid_resolution * grid_resolution + y * grid_resolution + z);
 				boid_cell_indices[i].cell_id = std::clamp(linear_index, 0, cell_amount - 1);
 				boid_cell_indices[i].boid_id = i;
 			}
@@ -76,7 +76,7 @@ namespace utils::runners
 
 		std::vector<behaviours::idx_range> find_cell_boid_range(const behaviours::boid_cell_index* boid_cell_indices, const size_t boid_amount, const float grid_resolution)
 		{
-			int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
+			int cell_amount = static_cast<int>(std::max(1.f, grid_resolution * grid_resolution * grid_resolution));
 
 			std::vector<behaviours::idx_range> cell_idx_range(cell_amount);
 
@@ -108,8 +108,8 @@ namespace utils::runners
 	{
 		namespace bhvr = behaviours;
 
-		float boid_fov = sim_params.dynamic_params.boid_fov;
-		float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
+		int boid_fov = sim_params.dynamic_params.boid_fov;
+		float cell_size = 2.f * boid_fov; // we base our grid size based on the boid fov 
 		float grid_resolution = sim_params.static_params.cube_size / cell_size;
 		
 		// create a "grid" and localize each boid inside of it with a linear index
@@ -146,8 +146,8 @@ namespace utils::runners
 	{
 		namespace bhvr = behaviours;
 
-		float boid_fov = sim_params.dynamic_params.boid_fov;
-		float cell_size = 2 * boid_fov; // we base our grid size based on the boid fov 
+		int boid_fov = sim_params.dynamic_params.boid_fov;
+		float cell_size = 2.f * boid_fov; // we base our grid size based on the boid fov 
 		float grid_resolution = sim_params.static_params.cube_size / cell_size;
 		
 		// create a "grid" and localize each boid inside of it with a linear index

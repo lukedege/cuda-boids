@@ -77,7 +77,7 @@ namespace utils::runners::behaviours::gpu
 		namespace uniform
 		{
 			inline __global__ void flock(float4* ssbo_positions, float4* ssbo_velocities, size_t amount,
-				boid_cell_index* boid_cell_indices, 
+				int* bci_boid_indices_dptr, int* bci_cell_indices_dptr,
 				int* cell_idx_range_start_dptr, int* cell_idx_range_end_dptr, size_t max_radius,
 				const float delta_time)
 			{
@@ -90,19 +90,20 @@ namespace utils::runners::behaviours::gpu
 				float wall_distance{ 0 };
 
 				int current_neighbour;
-				boid_cell_index current_boid = boid_cell_indices[current];
-				int range_start = cell_idx_range_start_dptr[current_boid.cell_id], range_end = cell_idx_range_end_dptr[current_boid.cell_id];
+				int current_boid_id      = bci_boid_indices_dptr[current];
+				int current_boid_cell_id = bci_cell_indices_dptr[current];
+				int range_start = cell_idx_range_start_dptr[current_boid_cell_id], range_end = cell_idx_range_end_dptr[current_boid_cell_id];
 
 				bool in_radius, near_wall;
 				float chs = sim_params_cmem.static_params.cube_size / 2; //chs -> cube half size
 				float wall_repel_distance = 1 + (chs * 2) * .01f;
 
-				float4 position_current = ssbo_positions[current_boid.boid_id], position_i;
+				float4 position_current = ssbo_positions[current_boid_id], position_i;
 				float4 new_position, new_velocity;
 
 				for (size_t i = range_start; i < range_end; i++)
 				{
-					current_neighbour = boid_cell_indices[i].boid_id;
+					current_neighbour = bci_boid_indices_dptr[i];
 					position_i = ssbo_positions[current_neighbour];
 					in_radius = utils::math::distance2(position_current, position_i) < max_radius * max_radius;
 
@@ -120,7 +121,7 @@ namespace utils::runners::behaviours::gpu
 					// wall_separation
 					for (size_t b = 0; b < 6; b++)
 					{
-						wall_distance = utils::math::distance_point_plane(ssbo_positions[current_boid.boid_id], sim_volume_cdptr[b]) + 0.0001f;
+						wall_distance = utils::math::distance_point_plane(ssbo_positions[current_boid_id], sim_volume_cdptr[b]) + 0.0001f;
 						near_wall = wall_distance < wall_repel_distance;
 						wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall;
 					}
@@ -133,11 +134,11 @@ namespace utils::runners::behaviours::gpu
 					+ sim_params_cmem.dynamic_params.separation_coeff * utils::math::normalize_or_zero(separation)
 					+ sim_params_cmem.dynamic_params.wall_separation_coeff * utils::math::normalize_or_zero(wall_separation);
 
-				new_velocity = utils::math::normalize_or_zero(ssbo_velocities[current_boid.boid_id] + accel_blend * delta_time); //v = u + at
+				new_velocity = utils::math::normalize_or_zero(ssbo_velocities[current_boid_id] + accel_blend * delta_time); //v = u + at
 				new_position = clamp((position_current + new_velocity * sim_params_cmem.dynamic_params.boid_speed * delta_time), { -chs,-chs,-chs,0 }, { chs,chs,chs,0 }); // ensures boids remain into the cube
 
-				ssbo_velocities[current_boid.boid_id] = new_velocity;
-				ssbo_positions [current_boid.boid_id] = new_position;
+				ssbo_velocities[current_boid_id] = new_velocity;
+				ssbo_positions [current_boid_id] = new_position;
 			}
 		}
 
