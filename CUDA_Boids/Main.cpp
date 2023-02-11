@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 		{
 			{ 1000000 },//boid_amount
 			{ 200.f },//cube_size
-			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
+			{ utils::runners::boid_runner::simulation_type::UNIFORM_GRID }, // simulation_type
 		},
 		{
 			{ 20.0f },//boid_speed
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		view_matrix = camera.view_matrix();
-		//runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
+		runner.draw(view_matrix, projection_matrix); //TODO la projection matrix è fissa magari non serve aggiornarla ogni frame tbh
 		
 
 		// ImGUI window creation

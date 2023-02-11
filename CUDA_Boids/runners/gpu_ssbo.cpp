@@ -42,22 +42,24 @@ namespace utils::runners
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_positions_dptr, amount, -spawn_range, spawn_range);
 		utils::cuda::containers::random_vec4_fill_dptr(ssbo_velocities_dptr, amount, -1, 1);
 
-		// we are not using shared memory so we prefer to have a bigger l1 cache
-		//checkCudaErrors(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+		// we are not able to use shared memory so we prefer l1 cache
+		checkCudaErrors(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
 
-		// manual transfers are sufficient since transfers on these variables are occasional and one-sided only (CPU->GPU) and are constant while kernel runs
+		// manual transfers are sufficient since transfers on these variables are occasional and one-sided only (CPU->GPU) and values are constant while kernel runs
 		checkCudaErrors(cudaMemcpyToSymbol(sim_params_cmem, &sim_params, sizeof(simulation_parameters)));
 
 		// The cube volume is constant so we can use cuda constant memory
 		checkCudaErrors(cudaMemcpyToSymbol(sim_volume_cdptr, sim_volume.data(), sizeof(utils::math::plane) * 6));
 		
-		//checkCudaErrors(cudaMalloc(&alignments_dptr      , amount * sizeof(float4)));
-		//checkCudaErrors(cudaMalloc(&cohesions_dptr       , amount * sizeof(float4)));
-		//checkCudaErrors(cudaMalloc(&separations_dptr     , amount * sizeof(float4)));
-		//checkCudaErrors(cudaMalloc(&wall_separations_dptr, amount * sizeof(float4)));
-		//
-		//// create streams
-		//cudaStreamCreate(&ali_stream); cudaStreamCreate(&coh_stream); cudaStreamCreate(&sep_stream); cudaStreamCreate(&wsp_stream);
+		// TODO comment before final draft
+		checkCudaErrors(cudaMalloc(&alignments_dptr      , amount * sizeof(float4)));
+		checkCudaErrors(cudaMalloc(&cohesions_dptr       , amount * sizeof(float4)));
+		checkCudaErrors(cudaMalloc(&separations_dptr     , amount * sizeof(float4)));
+		checkCudaErrors(cudaMalloc(&wall_separations_dptr, amount * sizeof(float4)));
+		
+		// TODO comment before final draft
+		// create streams
+		cudaStreamCreate(&ali_stream); cudaStreamCreate(&coh_stream); cudaStreamCreate(&sep_stream); cudaStreamCreate(&wsp_stream);
 
 		// create arrays for grid calculations
 		int boid_fov = sim_params.dynamic_params.boid_fov;
@@ -83,7 +85,7 @@ namespace utils::runners
 	void gpu_ssbo::naive_calculation(const float delta_time)
 	{
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		behaviours::gpu::naive::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, sim_params.dynamic_params.boid_fov, delta_time);
+		behaviours::gpu::naive::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, delta_time);
 		cudaDeviceSynchronize();
 	}
 
@@ -146,7 +148,7 @@ namespace utils::runners
 			sorted_velocities[current] = velocities[current_boid_id];
 		}
 	}
-	
+
 	void gpu_ssbo::uniform_grid_calculation(const float delta_time) 
 	{
 		namespace bhvr = behaviours;
@@ -169,7 +171,7 @@ namespace utils::runners
 		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_start_dptr, cell_idx_range_end_dptr, bci_cell_indices_dptr, amount);
 
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		bhvr::gpu::grid::uniform::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, amount, bci_boid_indices_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr, sim_params.dynamic_params.boid_fov, delta_time);
+		bhvr::gpu::grid::uniform::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, bci_boid_indices_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr, delta_time);
 		
 		cudaDeviceSynchronize(); // We wait for the calculations to finish before feeding the info to OpenGL
 	}
@@ -199,12 +201,98 @@ namespace utils::runners
 		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_start_dptr, cell_idx_range_end_dptr, bci_cell_indices_dptr, amount);
 
 		// Calculate velocities and apply velocity from all behaviours concurrently
-		bhvr::gpu::grid::coherent::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, sorted_positions_dptr, sorted_velocities_dptr, bci_cell_indices_dptr, amount, cell_idx_range_start_dptr, cell_idx_range_end_dptr, sim_params.dynamic_params.boid_fov, delta_time);
+		bhvr::gpu::grid::coherent::flock CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr, sorted_positions_dptr, sorted_velocities_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr, delta_time);
 		
 		cudaDeviceSynchronize(); // We wait for the calculations to finish before feeding the info to OpenGL
 	}
 
-	// TODO see if you can make this template and not check every loop the condition (sim_type aint gonna change during runtime) (https://stackoverflow.com/questions/56742898/avoid-checking-the-same-condition-every-step-in-a-loop-in-c)
+	// Modular behaviours temporary implementation
+	void gpu_ssbo::naive_calculation_modular(const float delta_time)
+	{
+		namespace bhvr = behaviours;
+
+		// Calculate velocities and apply velocity from all behaviours concurrently
+		bhvr::gpu::naive::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr,       ssbo_positions_dptr, ssbo_velocities_dptr);
+		bhvr::gpu::naive::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr,        ssbo_positions_dptr);
+		bhvr::gpu::naive::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr,      ssbo_positions_dptr);
+		bhvr::gpu::wall_separation   CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr);
+		
+		bhvr::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr,
+			alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, delta_time);
+
+		cudaDeviceSynchronize();
+	}
+
+	void gpu_ssbo::uniform_grid_calculation_modular(const float delta_time)
+	{
+		namespace bhvr = behaviours;
+
+		int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
+
+		//Reset the grid arrays
+		checkCudaErrors(cudaMemsetAsync(cell_idx_range_start_dptr, 0, sizeof(int) * cell_amount, cir_stream));
+		checkCudaErrors(cudaMemsetAsync(cell_idx_range_end_dptr, 0, sizeof(int) * cell_amount, cir_stream2));
+
+		// Assign linear grid index to each boid
+		assign_grid_indices CUDA_KERNEL(grid_size, block_size, 0, bci_stream)(bci_boid_indices_dptr, bci_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
+
+		// Use thrust to sort boids indices by grid index (thrust uses default stream so implicit sync)
+		thrust::device_ptr<int> thrust_bci_cell_ids(bci_cell_indices_dptr);
+		thrust::device_ptr<int> thrust_bci_boid_ids(bci_boid_indices_dptr);
+		thrust::sort_by_key(thrust_bci_cell_ids, thrust_bci_cell_ids + amount, thrust_bci_boid_ids);
+
+		// Find ranges for boids living in the same grid cell
+		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_start_dptr, cell_idx_range_end_dptr, bci_cell_indices_dptr, amount);
+
+		// Calculate velocities and apply velocity from all behaviours concurrently
+		bhvr::gpu::grid::uniform::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr , ssbo_positions_dptr, ssbo_velocities_dptr, bci_boid_indices_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr);
+		bhvr::gpu::grid::uniform::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr  , ssbo_positions_dptr, bci_boid_indices_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr);
+		bhvr::gpu::grid::uniform::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, ssbo_positions_dptr, bci_boid_indices_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr);
+		bhvr::gpu::wall_separation           CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr);
+
+		bhvr::gpu::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr,
+			alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, delta_time);
+
+		cudaDeviceSynchronize(); // We wait for the calculations to finish before feeding the info to OpenGL
+	}
+
+	void gpu_ssbo::coherent_grid_calculation_modular(const float delta_time)
+	{
+		namespace bhvr = behaviours;
+
+		int cell_amount = std::max(1.f, grid_resolution * grid_resolution * grid_resolution);
+
+		//Reset the grid arrays
+		checkCudaErrors(cudaMemsetAsync(cell_idx_range_start_dptr, 0, sizeof(int) * cell_amount, cir_stream));
+		checkCudaErrors(cudaMemsetAsync(cell_idx_range_end_dptr, 0, sizeof(int) * cell_amount, cir_stream2));
+
+		// Assign linear grid index to each boid 
+		assign_grid_indices CUDA_KERNEL(grid_size, block_size, 0, bci_stream)(bci_boid_indices_dptr, bci_cell_indices_dptr, ssbo_positions_dptr, amount, sim_params.static_params.cube_size, grid_resolution);
+
+		// Use thrust to sort boids indices by grid index (thrust uses default stream so implicit sync)
+		thrust::device_ptr<int> thrust_bci_cell_ids(bci_cell_indices_dptr);
+		thrust::device_ptr<int> thrust_bci_boid_ids(bci_boid_indices_dptr);
+		thrust::sort_by_key(thrust_bci_cell_ids, thrust_bci_cell_ids + amount, thrust_bci_boid_ids);
+
+		// Reorder vel/pos in another array
+		reorder_by_bci CUDA_KERNEL(grid_size, block_size, 0, bci_stream) (sorted_positions_dptr, ssbo_positions_dptr, sorted_velocities_dptr, ssbo_velocities_dptr, bci_boid_indices_dptr, bci_cell_indices_dptr, amount);
+
+		// Find ranges for boids living in the same grid cell
+		find_cell_boid_range CUDA_KERNEL(grid_size, block_size, 0, cir_stream)(cell_idx_range_start_dptr, cell_idx_range_end_dptr, bci_cell_indices_dptr, amount);
+
+		// Calculate velocities and apply velocity from all behaviours concurrently
+		bhvr::gpu::grid::coherent::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr , sorted_positions_dptr, sorted_velocities_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr);
+		bhvr::gpu::grid::coherent::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr  , sorted_positions_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr);
+		bhvr::gpu::grid::coherent::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr, sorted_positions_dptr, bci_cell_indices_dptr, cell_idx_range_start_dptr, cell_idx_range_end_dptr);
+		bhvr::gpu::wall_separation           CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, ssbo_positions_dptr);
+
+		bhvr::gpu::grid::coherent::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr,
+			sorted_positions_dptr, sorted_velocities_dptr,
+			alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, delta_time);
+
+		cudaDeviceSynchronize(); // We wait for the calculations to finish before feeding the info to OpenGL
+	}
+
 	void gpu_ssbo::calculate(const float delta_time)
 	{
 		switch (sim_params.static_params.sim_type)
@@ -220,6 +308,8 @@ namespace utils::runners
 			break;
 		}
 	}
+
+	
 
 	void gpu_ssbo::draw(const glm::mat4& view_matrix, const glm::mat4& projection_matrix)
 	{
@@ -240,14 +330,15 @@ namespace utils::runners
 
 	gpu_ssbo::~gpu_ssbo()
 	{
-		//checkCudaErrors(cudaStreamDestroy(ali_stream)); 
-		//checkCudaErrors(cudaStreamDestroy(coh_stream)); 
-		//checkCudaErrors(cudaStreamDestroy(sep_stream)); 
-		//checkCudaErrors(cudaStreamDestroy(wsp_stream));
-		//checkCudaErrors(cudaFree(alignments_dptr      ));
-		//checkCudaErrors(cudaFree(cohesions_dptr       ));
-		//checkCudaErrors(cudaFree(separations_dptr     ));
-		//checkCudaErrors(cudaFree(wall_separations_dptr));
+		// TODO comment before final draft
+		checkCudaErrors(cudaStreamDestroy(ali_stream)); 
+		checkCudaErrors(cudaStreamDestroy(coh_stream)); 
+		checkCudaErrors(cudaStreamDestroy(sep_stream)); 
+		checkCudaErrors(cudaStreamDestroy(wsp_stream));
+		checkCudaErrors(cudaFree(alignments_dptr      ));
+		checkCudaErrors(cudaFree(cohesions_dptr       ));
+		checkCudaErrors(cudaFree(separations_dptr     ));
+		checkCudaErrors(cudaFree(wall_separations_dptr));
 
 		checkCudaErrors(cudaStreamDestroy(bci_stream)); 
 		checkCudaErrors(cudaStreamDestroy(cir_stream));
