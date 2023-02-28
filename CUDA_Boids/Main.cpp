@@ -20,8 +20,9 @@
 #include "utils/window.h"
 #include "utils/orbit_camera.h"
 
-#include "runners/gpu_ssbo.h"
 #include "runners/cpu_ssbo.h"
+#include "runners/gpu_ssbo_monolithic.h"
+#include "runners/gpu_ssbo_modular.h"
 
 namespace ugl = utils::graphics::opengl;
 
@@ -49,10 +50,10 @@ int main(int argc, char** argv)
 			{ "CUDA Boid simulation" }, //.title
 			{ 4       }, //.gl_version_major
 			{ 3       }, //.gl_version_minor
-			{ 1280    }, //.window_width
-			{ 720     }, //.window_height
-			{ 1280    }, //.viewport_width
-			{ 720     }, //.viewport_height
+			{ 1920    }, //.window_width
+			{ 1080     }, //.window_height
+			{ 1920    }, //.viewport_width
+			{ 1080     }, //.viewport_height
 			{ false   }, //.resizable
 			{ true   }, //.debug_gl
 		}
@@ -79,9 +80,9 @@ int main(int argc, char** argv)
 	utils::runners::boid_runner::simulation_parameters params
 	{
 		{
-			{ 1000000 },//boid_amount
+			{ 100000 },//boid_amount
 			{ 200.f },//cube_size
-			{ utils::runners::boid_runner::simulation_type::UNIFORM_GRID }, // simulation_type
+			{ utils::runners::boid_runner::simulation_type::COHERENT_GRID }, // simulation_type
 		},
 		{
 			{ 20.0f },//boid_speed
@@ -108,8 +109,7 @@ int main(int argc, char** argv)
 		std::cout << "WARNING: Provided no arguments or invalid ones, running with default parameters\n";
 	}
 
-	utils::runners::gpu_ssbo runner{ params };
-	
+	utils::runners::gpu_ssbo_monolithic runner{ params };
 	
 	// Visualization matrices setup for camera
 	glm::mat4 projection_matrix = glm::perspective(45.0f, width / height, 0.1f, 10000.0f);

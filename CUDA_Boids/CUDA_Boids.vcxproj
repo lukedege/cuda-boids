@@ -112,7 +112,8 @@
     <ClInclude Include="runners\boid_runner.h" />
     <ClInclude Include="runners\cpu_ssbo.h" />
     <CudaCompile Include="runners\gpu_boid_behaviours.h" />
-    <ClInclude Include="runners\gpu_ssbo.h" />
+    <ClInclude Include="runners\gpu_ssbo_monolithic.h" />
+    <ClInclude Include="runners\gpu_ssbo_modular.h" />
     <ClInclude Include="runners\ssbo_runner.h" />
     <ClInclude Include="utils\camera.h" />
     <ClInclude Include="utils\CUDA\cudaGLmanager.h" />
@@ -126,6 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
+    <CudaCompile Include="runners\gpu_ssbo_modular.cpp" />
     <CudaCompile Include="Main.cpp" />
     <CudaCompile Include="quick_tests.cpp" />
     <CudaCompile Include="runners\cpu_ssbo.cpp" />
@@ -135,7 +137,7 @@
     <ClCompile Include="F:\Libraries\imgui-1.88\imgui_draw.cpp" />
     <ClCompile Include="F:\Libraries\imgui-1.88\imgui_tables.cpp" />
     <ClCompile Include="F:\Libraries\imgui-1.88\imgui_widgets.cpp" />
-    <CudaCompile Include="runners\gpu_ssbo.cpp" />
+    <CudaCompile Include="runners\gpu_ssbo_monolithic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.frag" />

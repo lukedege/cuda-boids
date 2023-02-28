@@ -9,7 +9,7 @@
 extern __constant__ utils::math::plane sim_volume_cdptr[6];
 extern __constant__ utils::runners::boid_runner::simulation_parameters sim_params_cmem;
 
-#pragma region single_behaviour
+#pragma region monolithic_behaviour
 namespace utils::runners::behaviours::gpu
 {
 	namespace naive
@@ -276,20 +276,7 @@ namespace utils::runners::behaviours::gpu
 }
 #pragma endregion
 
-
-
-////// Alternative method, even if looks more modular, the numerous memory requests to global for boid info is a bottleneck
-// bhvr::gpu::grid::coherent::alignment  CUDA_KERNEL(grid_size, block_size, 0, ali_stream)(alignments_dptr, sorted_positions_dptr, sorted_velocities_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-// bhvr::gpu::grid::coherent::cohesion   CUDA_KERNEL(grid_size, block_size, 0, coh_stream)(cohesions_dptr,        sorted_positions_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-// bhvr::gpu::grid::coherent::separation CUDA_KERNEL(grid_size, block_size, 0, sep_stream)(separations_dptr,      sorted_positions_dptr, sorted_cell_indices_dptr, amount, cell_idx_range_dptr, sim_params.dynamic_params.boid_fov);
-// bhvr::gpu::wall_separation            CUDA_KERNEL(grid_size, block_size, 0, wsp_stream)(wall_separations_dptr, sorted_positions_dptr, sim_volume_dptr, amount);
-// 
-// bhvr::gpu::grid::coherent::blender CUDA_KERNEL(grid_size, block_size)(ssbo_positions_dptr, ssbo_velocities_dptr,
-//	positions_aux_dptr, velocities_aux_dptr,
-//	alignments_dptr, cohesions_dptr, separations_dptr, wall_separations_dptr, sim_params_dptr, amount, delta_time);
-//////
-
-#pragma region composite_behaviour
+#pragma region modular_behaviour
 namespace utils::runners::behaviours::gpu
 {
 	inline __global__ void wall_separation(float4* wall_separations, float4* positions)

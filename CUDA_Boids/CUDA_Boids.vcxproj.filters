@@ -66,7 +66,7 @@
     <ClInclude Include="runners\ssbo_runner.h">
       <Filter>Headers\runners</Filter>
     </ClInclude>
-    <ClInclude Include="runners\gpu_ssbo.h">
+    <ClInclude Include="runners\gpu_ssbo_monolithic.h">
       <Filter>Headers\runners\ssbo_runners</Filter>
     </ClInclude>
     <ClInclude Include="runners\cpu_ssbo.h">
@@ -87,9 +87,12 @@
     <ClInclude Include="runners\behaviour_utils.h">
       <Filter>Headers\runners\behaviours</Filter>
     </ClInclude>
+    <ClInclude Include="runners\gpu_ssbo_modular.h">
+      <Filter>Headers\runners\ssbo_runners</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="runners\gpu_ssbo.cpp">
+    <CudaCompile Include="runners\gpu_ssbo_monolithic.cpp">
       <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
     <CudaCompile Include="quick_tests.cpp">
@@ -106,6 +109,9 @@
     </CudaCompile>
     <CudaCompile Include="runners\gpu_boid_behaviours.h">
       <Filter>Headers\runners\behaviours</Filter>
+    </CudaCompile>
+    <CudaCompile Include="runners\gpu_ssbo_modular.cpp">
+      <Filter>Sources\Runners\ssbo_runners</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

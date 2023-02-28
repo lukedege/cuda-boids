@@ -157,6 +157,7 @@ namespace utils::runners
 		auto order_by_cell_id = [](const bhvr::boid_cell_index& a, const bhvr::boid_cell_index& b) -> bool { return a.cell_id < b.cell_id; };
 		std::sort(boid_cell_indices.begin(), boid_cell_indices.end(), order_by_cell_id);
 		
+		// Reorder vel/pos in another array
 		std::vector<float4> new_vel(amount), new_pos(amount);
 		std::vector<int> cell_ids(amount);
 		for (size_t i = 0; i < amount; i++)
