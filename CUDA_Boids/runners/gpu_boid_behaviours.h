@@ -47,15 +47,16 @@ namespace utils::runners::behaviours::gpu
 				// separation
 				repulsion = position_current - position_i;
 				separation += (repulsion / (utils::math::length2(repulsion) + 0.0001f)) * in_radius;
-
-				// wall_separation
-				for (size_t b = 0; b < 6; b++)
-				{
-					wall_distance = utils::math::distance_point_plane(ssbo_positions[current], sim_volume_cdptr[b]) + 0.0001f;
-					near_wall = wall_distance < wall_repel_distance;
-					wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall;
-				}
 			}
+
+			// wall_separation
+			for (size_t b = 0; b < 6; b++)
+			{
+				wall_distance = utils::math::distance_point_plane(position_current, sim_volume_cdptr[b]) + 0.0001f;
+				near_wall = wall_distance < wall_repel_distance;
+				wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall;
+			}
+
 			cohesion /= counter;
 			cohesion -= position_current;
 
@@ -116,15 +117,16 @@ namespace utils::runners::behaviours::gpu
 					// separation
 					repulsion = position_current - position_i;
 					separation += (repulsion / (utils::math::length2(repulsion) + 0.0001f)) * in_radius;
-
-					// wall_separation
-					for (size_t b = 0; b < 6; b++)
-					{
-						wall_distance = utils::math::distance_point_plane(ssbo_positions[current_boid_id], sim_volume_cdptr[b]) + 0.0001f;
-						near_wall = wall_distance < wall_repel_distance;
-						wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall;
-					}
 				}
+
+				// wall_separation
+				for (size_t b = 0; b < 6; b++)
+				{
+					wall_distance = utils::math::distance_point_plane(position_current, sim_volume_cdptr[b]) + 0.0001f;
+					near_wall = wall_distance < wall_repel_distance;
+					wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall;
+				}
+
 				cohesion /= counter;
 				cohesion -= position_current;
 
@@ -183,14 +185,15 @@ namespace utils::runners::behaviours::gpu
 					repulsion = position_current - position_i;
 					separation += (repulsion / (utils::math::length2(repulsion) + 0.0001f)) * in_radius;
 
-					// wall_separation
-					for (size_t b = 0; b < 6; b++)
-					{
-						wall_distance = utils::math::distance_point_plane(position_current, sim_volume_cdptr[b]) + 0.0001f;
-						near_wall = wall_distance < wall_repel_distance;
-						wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall; //wall repulsion calculation
-					}
 				}
+				// wall_separation
+				for (size_t b = 0; b < 6; b++)
+				{
+					wall_distance = utils::math::distance_point_plane(position_current, sim_volume_cdptr[b]) + 0.0001f;
+					near_wall = wall_distance < wall_repel_distance;
+					wall_separation += (sim_volume_cdptr[b].normal / abs(wall_distance)) * near_wall; //wall repulsion calculation
+				}
+
 				cohesion /= counter; // baricenter calculated
 				cohesion -= position_current; // direction towards baricenter
 
