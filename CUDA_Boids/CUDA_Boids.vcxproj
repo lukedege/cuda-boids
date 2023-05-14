@@ -31,7 +31,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.7.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -68,7 +68,8 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_37,sm_37</CodeGeneration>
+      <CodeGeneration>
+      </CodeGeneration>
       <CudaRuntime>Shared</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalOptions>-std=c++17 -Wno-deprecated-gpu-targets %(AdditionalOptions)</AdditionalOptions>
@@ -98,12 +99,13 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <CodeGeneration>compute_37,sm_37</CodeGeneration>
+      <CodeGeneration>
+      </CodeGeneration>
       <CudaRuntime>Static</CudaRuntime>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <AdditionalOptions>-std=c++17 -Wno-deprecated-gpu-targets -lineinfo %(AdditionalOptions)</AdditionalOptions>
       <FastMath>true</FastMath>
-      <PtxAsOptionV>true</PtxAsOptionV>
+      <PtxAsOptionV>false</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -127,16 +129,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Libraries\glad\glad.c" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_draw.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_tables.cpp" />
+    <ClCompile Include="..\..\..\Libraries\imgui-1.88\imgui_widgets.cpp" />
     <CudaCompile Include="runners\gpu_ssbo_modular.cpp" />
     <CudaCompile Include="Main.cpp" />
     <CudaCompile Include="quick_tests.cpp" />
     <CudaCompile Include="runners\cpu_ssbo.cpp" />
-    <ClCompile Include="F:\Libraries\imgui-1.88\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="F:\Libraries\imgui-1.88\backends\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="F:\Libraries\imgui-1.88\imgui.cpp" />
-    <ClCompile Include="F:\Libraries\imgui-1.88\imgui_draw.cpp" />
-    <ClCompile Include="F:\Libraries\imgui-1.88\imgui_tables.cpp" />
-    <ClCompile Include="F:\Libraries\imgui-1.88\imgui_widgets.cpp" />
     <CudaCompile Include="runners\gpu_ssbo_monolithic.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -148,6 +150,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.7.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.1.targets" />
   </ImportGroup>
 </Project>
